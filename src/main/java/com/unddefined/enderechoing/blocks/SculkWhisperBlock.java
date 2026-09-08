@@ -8,6 +8,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -25,6 +28,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static com.unddefined.enderechoing.Config.*;
+import static com.unddefined.enderechoing.server.registry.MobEffectRegistry.SCULK_INTRUSION;
 
 public class SculkWhisperBlock extends Block implements EntityBlock {
     public SculkWhisperBlock() {
@@ -50,7 +54,13 @@ public class SculkWhisperBlock extends Block implements EntityBlock {
         return ItemInteractionResult.SUCCESS;
     }
 
-        @Override
+    @Override
+    public void stepOn(Level level, BlockPos pos, BlockState state, Entity entity) {
+        if (!(entity instanceof LivingEntity e)) return;
+        e.addEffect(new MobEffectInstance(SCULK_INTRUSION, 20 * 60));
+    }
+
+    @Override
     public @Nullable BlockEntity newBlockEntity(@NotNull BlockPos pos, @NotNull BlockState state) {
         return new SculkWhisperBlockEntity(pos, state);
     }

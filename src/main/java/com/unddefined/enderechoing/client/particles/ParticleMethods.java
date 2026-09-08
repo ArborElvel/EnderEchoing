@@ -5,11 +5,6 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 
 public class ParticleMethods {
-    // 非静态（次声波爆发）粒子密度：约 1 个/格²，总量封顶 3000，
-    // 避免半透明粒子一次性生成过多，在光影下刚生成时造成明显卡顿
-    private static final float NON_STATIC_PARTICLES_PER_BLOCK = 1.0F;
-    private static final int MAX_NON_STATIC_PARTICLES = 3000;
-
     public static void spawnInfrasoundParticles(ClientLevel level, Vec3 center, float radius, boolean isStatic) {
         RandomSource random = level.random;
 
@@ -56,15 +51,37 @@ public class ParticleMethods {
             }
         } else {
             int particleCount = (int) (Math.PI * radius * radius * 100 + 1);
-            for (int i = 0; i < particleCount; i++) {
+            // 不规则分布：先随机生成若干“雾团中心”，再让粒子围绕中心聚散，
+            // 替代均匀铺满球体，使云团疏密不均、边缘参差
+            int clusterCount = Math.max(2, (int) Math.round(Math.cbrt(particleCount)));
+            double[] clusterX = new double[clusterCount];
+            double[] clusterY = new double[clusterCount];
+            double[] clusterZ = new double[clusterCount];
+            double[] spreadX = new double[clusterCount];
+            double[] spreadY = new double[clusterCount];
+            double[] spreadZ = new double[clusterCount];
+            for (int c = 0; c < clusterCount; c++) {
                 double theta = random.nextDouble() * 2 * Math.PI; // 方位角
                 double phi = Math.acos(2 * random.nextDouble() - 1); // 极角
-                // 添加半径内的随机距离，使粒子分布在整个球体内部
-                double r = radius * Math.cbrt(random.nextDouble());
+                // 雾团中心散布在球体内部，并保留原有的 +0.4 上移
+                double dist = radius * 0.65 * Math.cbrt(random.nextDouble());
+                clusterX[c] = center.x + dist * Math.sin(phi) * Math.cos(theta);
+                clusterY[c] = center.y + 0.4 + dist * Math.cos(phi);
+                clusterZ[c] = center.z + dist * Math.sin(phi) * Math.sin(theta);
 
-                double x = center.x + r * Math.sin(phi) * Math.cos(theta);
-                double y = center.y + radius * Math.cos(phi) + 0.4;
-                double z = center.z + r * Math.sin(phi) * Math.sin(theta);
+                double baseSpread = radius * 0.75;
+                // 各雾团三轴扩散幅度不同，形成歪斜、不规则的浓淡分布
+                spreadX[c] = baseSpread * (0.6 + 0.8 * random.nextDouble());
+                spreadY[c] = baseSpread * (0.6 + 0.8 * random.nextDouble());
+                spreadZ[c] = baseSpread * (0.6 + 0.8 * random.nextDouble());
+            }
+
+            for (int i = 0; i < particleCount; i++) {
+                int cluster = random.nextInt(clusterCount);
+                // 两次均匀随机叠加成峰形分布，粒子向所选雾团中心聚拢
+                double x = clusterX[cluster] + (random.nextDouble() + random.nextDouble() - 1) * spreadX[cluster];
+                double y = clusterY[cluster] + (random.nextDouble() + random.nextDouble() - 1) * spreadY[cluster];
+                double z = clusterZ[cluster] + (random.nextDouble() + random.nextDouble() - 1) * spreadZ[cluster];
 
                 // 根据位置确定粒子类型
                 float particleSelector = random.nextFloat();
