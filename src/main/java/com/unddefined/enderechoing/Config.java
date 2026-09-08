@@ -49,7 +49,7 @@ public class Config {
 
     public static final ModConfigSpec.IntValue SCULK_VEIL_DARKNESS_DURATION = BUILDER
             .comment("Duration of the Darkness effect applied by Sculk Veil, in seconds.")
-            .defineInRange("sculk_veil_darkness_duration", 10, 20, Integer.MAX_VALUE);
+            .defineInRange("sculk_veil_darkness_duration", 20, 20, Integer.MAX_VALUE);
 
     public static final ModConfigSpec.IntValue SCULK_VEIL_GLOWING_DURATION = BUILDER
             .comment("Duration of the Glowing effect applied by Sculk Veil, in seconds.")

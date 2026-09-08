@@ -5,6 +5,7 @@ import com.unddefined.enderechoing.blocks.EnderEchoCrystalBlock;
 import com.unddefined.enderechoing.server.DataComponents.EnderEchoCrystalSavedData;
 import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
 import com.unddefined.enderechoing.server.registry.ItemRegistry;
+import com.unddefined.enderechoing.server.registry.PotionRegistry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -17,17 +18,25 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.EnderMan;
 import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.monster.warden.Warden;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.Potions;
+import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
+import net.neoforged.neoforge.event.VanillaGameEvent;
+import net.neoforged.neoforge.event.brewing.RegisterBrewingRecipesEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import top.theillusivec4.curios.api.CuriosApi;
 
@@ -39,14 +48,67 @@ import static com.unddefined.enderechoing.effects.AttackScatteredEffect.attack_s
 import static com.unddefined.enderechoing.effects.StaggerEffect.stagger_modifier_id;
 import static com.unddefined.enderechoing.effects.TinnitusEffect.tinnitus_modifier_id;
 import static com.unddefined.enderechoing.server.registry.BlockRegistry.ENDER_ECHOIC_RESONATOR;
-import static com.unddefined.enderechoing.server.registry.DataRegistry.EE_PEARL_AMOUNT;
-import static com.unddefined.enderechoing.server.registry.DataRegistry.MARKED_POSITIONS_CACHE;
+import static com.unddefined.enderechoing.server.registry.DataRegistry.*;
 import static com.unddefined.enderechoing.server.registry.MobEffectRegistry.*;
 import static net.minecraft.world.effect.MobEffects.GLOWING;
 import static net.minecraft.world.entity.ai.attributes.Attributes.*;
 
 @EventBusSubscriber(modid = EnderEchoing.MODID)
 public class ServerEvents {
+    @SubscribeEvent
+    public static void onRegisterBrewingRecipes(RegisterBrewingRecipesEvent event) {
+        // 幽匿脉络 + 粗制药水 → 幽匿侵扰药水
+        event.getBuilder().addMix(Potions.AWKWARD, Items.SCULK_VEIN, PotionRegistry.SCULK_INTRUSION);
+    }
+
+    @SubscribeEvent
+    public static void onEntityDeath(VanillaGameEvent event) {
+        if (!event.getVanillaEvent().is(GameEvent.ENTITY_DIE)) return;
+        if (!(event.getLevel() instanceof ServerLevel level)) return;
+        if (!(event.getCause() instanceof LivingEntity dead)) return;
+        if (!dead.shouldDropExperience() || dead.wasExperienceConsumed()) return;
+
+        var damageSource = dead.getLastDamageSource();
+        int xp = dead.getExperienceReward(level, damageSource == null ? null : damageSource.getEntity());
+        if (xp <= 0) return;
+
+        Vec3 deathPos = event.getEventPosition();
+        // 先找作用盒覆盖到死亡点的主体（带侵扰效果或监守者），没有就不用抢这份经验
+        double radius = SculkIntrusionSpreader.FOLLOW_RADIUS;
+        var host = level.getEntitiesOfClass(LivingEntity.class, AABB.ofSize(deathPos, radius * 2, radius * 2, radius * 2),
+                h -> h.isAlive() && (h.hasEffect(SCULK_INTRUSION) || h instanceof Warden)
+                        && SculkIntrusionSpreader.followBox(h).contains(deathPos)).getFirst();
+        if (host == null) return;
+        // 附近有可用的幽匿催发体时让给它：它会在派发阶段吃掉这份死亡经验
+        if (SculkIntrusionSpreader.hasUsableCatalystNearby(level, deathPos)) return;
+        // 有几率由侵扰主体转化经验
+        if (level.getRandom().nextFloat() >= ((host instanceof Warden) ? 0 : SculkIntrusionSpreader.TRIGGER_CHANCE)) return;
+        host.getData(SCULK_SPREADER).absorbEntityDeath(level, host, deathPos, xp);
+        dead.skipDropExperience();
+
+    }
+
+    /**
+     * 监守者击中目标后为目标赋予侵扰效果（覆盖近战与音爆伤害）
+     */
+    @SubscribeEvent
+    public static void onWardenAttack(LivingIncomingDamageEvent event) {
+        if (!(event.getSource().getEntity() instanceof Warden)) return;
+        if (!(event.getEntity().level() instanceof ServerLevel)) return;
+        event.getEntity().addEffect(new MobEffectInstance(SCULK_INTRUSION, 20 * 60));
+    }
+
+    /**
+     * 监守者常驻携带侵扰 spreader：没有侵扰效果时也每 tick 驱动
+     */
+    @SubscribeEvent
+    public static void onEntityTick(EntityTickEvent.Post event) {
+        if (!(event.getEntity() instanceof Warden warden)) return;
+        if (!(warden.level() instanceof ServerLevel level)) return;
+        if (!warden.isAlive() || warden.hasEffect(SCULK_INTRUSION)) return;
+        warden.getData(SCULK_SPREADER).serverTick(level, warden);
+    }
+
     @SubscribeEvent
     public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
@@ -75,6 +137,8 @@ public class ServerEvents {
     @SubscribeEvent
     public static void onExpireEffect(MobEffectEvent.Expired event) {
         var E = event.getEntity();
+        if (!E.hasEffect(SCULK_INTRUSION)) E.getData(SCULK_SPREADER).clear();
+
         if (!E.hasEffect(TINNITUS) && E.getAttribute(FOLLOW_RANGE) != null) {
             if (E instanceof Monster monster) monster.getAttribute(FOLLOW_RANGE).removeModifier(tinnitus_modifier_id);
         }
@@ -143,7 +207,7 @@ public class ServerEvents {
                     .filter(e -> e != enderMan).filter(e -> e.getTarget() == null)
                     .filter(e -> !e.isAlliedTo(player)).forEach(e -> e.setTarget(player));
             slot.stack().shrink(1);
-            player.level().playSound(player,player.blockPosition(), SoundEvents.ENDER_EYE_DEATH, SoundSource.PLAYERS,1f,1f);
+            player.level().playSound(player, player.blockPosition(), SoundEvents.ENDER_EYE_DEATH, SoundSource.PLAYERS, 1f, 1f);
         });
     }
 

@@ -129,7 +129,7 @@ public class EnderEchoTunerBlock extends Block implements EntityBlock {
             }
             var stackPos = stack.get(POSITION);
             boolean result = stackPos != null && MarkedPositionsManager.getManager(player)
-                    .addMarkedPosition(stackPos.dimension(), stackPos.pos(), stack.get(CUSTOM_NAME).getString(), 0, Boolean.TRUE.equals(stack.get(TBOUND)));
+                    .addMarkedPosition(stackPos.dimension(), stackPos.pos(), stack.get(CUSTOM_NAME).getString(), player.getData(SELECTED_TUNER_TAB), Boolean.TRUE.equals(stack.get(TBOUND)));
             player.setData(EE_PEARL_AMOUNT, player.getData(EE_PEARL_AMOUNT) + stack.getCount() - (result ? 1 : 0));
             stack.shrink(stack.getCount());
             return ItemInteractionResult.SUCCESS;

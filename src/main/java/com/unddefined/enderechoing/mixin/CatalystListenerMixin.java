@@ -8,13 +8,14 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SculkCatalystBlock;
 import net.minecraft.world.level.block.SculkShriekerBlock;
+import net.minecraft.world.level.block.entity.SculkShriekerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.gameevent.PositionSource;
@@ -42,7 +43,7 @@ public class CatalystListenerMixin {
                 && !livingEntity.wasExperienceConsumed()) {
 
             int experienceReward = livingEntity.getExperienceReward(level, Optionull.map(livingEntity.getLastDamageSource(), DamageSource::getEntity));
-            if (livingEntity.shouldDropExperience() || experienceReward < 1) cir.setReturnValue(false);
+            if (!livingEntity.shouldDropExperience() || experienceReward < 1) cir.setReturnValue(false);
 
             // 通过positionSource获取Sculk Catalyst的位置
             Optional<Vec3> catalystPosOpt = positionSource.getPosition(level);
@@ -65,9 +66,12 @@ public class CatalystListenerMixin {
                 }
             }
 
-            if (aboveState.getBlock().equals(Blocks.SCULK_SHRIEKER) && !aboveState.getValue(SculkShriekerBlock.CAN_SUMMON)) {
-                if (level.getRandom().nextInt(Config.SCULK_SHRIEKER_CAN_SUMMON_CHANCE.get()) == 0)
-                    aboveState.setValue(SculkShriekerBlock.CAN_SUMMON, true);
+            if (level.getBlockEntity(catalystPos.above()) instanceof SculkShriekerBlockEntity B && !aboveState.getValue(SculkShriekerBlock.CAN_SUMMON)) {
+                if (level.getRandom().nextInt(Config.SCULK_SHRIEKER_CAN_SUMMON_CHANCE.get()) == 0) {
+                    level.setBlock(catalystPos.above(), aboveState.setValue(SculkShriekerBlock.CAN_SUMMON, true), 3);
+                    var player = level.getNearestPlayer(catalystPos.getX(), catalystPos.getY(), catalystPos.getZ(), 8, false);
+                    B.tryShriek(level, (ServerPlayer)player);
+                }
                 livingEntity.skipDropExperience();
                 enderEchoing$bloom(level, catalystPos);
                 cir.setReturnValue(true);

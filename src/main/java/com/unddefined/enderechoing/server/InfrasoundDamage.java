@@ -70,6 +70,7 @@ public class InfrasoundDamage extends DamageSource {
                     entity.addEffect(new MobEffectInstance(STAGGER, duration * 20, 1));
                     entity.addEffect(new MobEffectInstance(TINNITUS, duration * 20, 1));
                     entity.addEffect(new MobEffectInstance(CONFUSION, duration * 20, 1));
+                   if(level.getRandom().nextInt(3) == 0) entity.addEffect(new MobEffectInstance(SCULK_INTRUSION, duration * 20, 1));
                 }
             }
 

@@ -52,6 +52,7 @@ import static com.unddefined.enderechoing.server.registry.BlockRegistry.ENDER_EC
 import static com.unddefined.enderechoing.server.registry.DataRegistry.*;
 import static com.unddefined.enderechoing.server.registry.MobEffectRegistry.SCULK_VEIL;
 import static net.minecraft.core.component.DataComponents.CUSTOM_NAME;
+import static net.minecraft.world.effect.MobEffects.GLOWING;
 
 public class EnderEchoingCore extends Item implements GeoItem {
     private static final String CONTROLLER_NAME = "controller";
@@ -247,6 +248,7 @@ public class EnderEchoingCore extends Item implements GeoItem {
     public void releaseUsing(ItemStack stack, Level level, LivingEntity livingEntity, int timeLeft) {
         // 当玩家释放使用物品时，移除动画层
         super.releaseUsing(stack, level, livingEntity, timeLeft);
+        if(level.getRandom().nextInt(5) == 0) livingEntity.addEffect(new MobEffectInstance(GLOWING,300));
         if (livingEntity instanceof AbstractClientPlayer clientPlayer) {
             AnimationStack animationStack = PlayerAnimationAccess.getPlayerAnimLayer(clientPlayer);
             animationStack.removeLayer(42);

@@ -27,7 +27,7 @@ public class SculkBlockMixin {
     private void enderechoing$naturalSculkWhisperGrowth(LevelAccessor level, BlockPos pos, RandomSource random,
                                                         boolean isWorldGeneration, CallbackInfoReturnable<BlockState> cir) {
         BlockState state;
-        switch (random.nextInt(10)) {
+        switch (random.nextInt(isWorldGeneration ? 10 : 5)) {
             case 0 -> state = Blocks.SCULK_SHRIEKER.defaultBlockState()
                     .setValue(SculkShriekerBlock.CAN_SUMMON, isWorldGeneration || random.nextInt(7) == 0);
             case 1 -> {

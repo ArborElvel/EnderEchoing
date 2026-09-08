@@ -1,7 +1,13 @@
 package com.unddefined.enderechoing.effects;
 
+import com.unddefined.enderechoing.server.registry.DataRegistry;
+import com.unddefined.enderechoing.server.registry.MobEffectRegistry;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.LivingEntity;
 
 public class SculkIntrusionEffect extends MobEffect {
     public SculkIntrusionEffect() {
@@ -9,5 +15,17 @@ public class SculkIntrusionEffect extends MobEffect {
     }
     @Override
     public boolean shouldApplyEffectTickThisTick(int pDuration, int pAmplifier) {return true;}
-
+    @Override
+    public void onEffectAdded(LivingEntity entity, int pAmplifier) {
+        var effect = entity.getEffect(MobEffectRegistry.SCULK_INTRUSION);
+        if (effect != null && effect.getDuration() > 0)
+            entity.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, effect.getDuration() / 2));
+    }
+    @Override
+    public boolean applyEffectTick(LivingEntity entity, int pAmplifier) {
+        if (entity.level() instanceof ServerLevel serverLevel) {
+            entity.getData(DataRegistry.SCULK_SPREADER).serverTick(serverLevel, entity);
+        }
+        return true;
+    }
 }

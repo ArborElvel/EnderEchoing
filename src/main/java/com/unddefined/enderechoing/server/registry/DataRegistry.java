@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.unddefined.enderechoing.server.DataComponents.EntityData;
 import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
 import com.unddefined.enderechoing.server.DataComponents.VisitedStructures;
+import com.unddefined.enderechoing.server.SculkIntrusionSpreader;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.component.DataComponentType;
@@ -51,6 +52,9 @@ public class DataRegistry {
     );
     public static final Supplier<AttachmentType<VisitedStructures>> VISITED_STRUCTURES = ATTACHMENT_TYPES.register(
             "visited_structures", () -> AttachmentType.serializable(VisitedStructures::new).copyOnDeath().build()
+    );
+    public static final Supplier<AttachmentType<SculkIntrusionSpreader>> SCULK_SPREADER = ATTACHMENT_TYPES.register(
+            "sculk_intrusion_spreader", () -> AttachmentType.builder(SculkIntrusionSpreader::new).build()
     );
 
     public static List<ItemStack> initDefaultIconList() {

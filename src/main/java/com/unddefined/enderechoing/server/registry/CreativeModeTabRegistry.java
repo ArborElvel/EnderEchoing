@@ -5,6 +5,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.PotionContents;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -42,5 +43,8 @@ public class CreativeModeTabRegistry {
                 output.accept(ItemRegistry.ECHO_DRUSE_STAGE2_ITEM.get());
                 output.accept(ItemRegistry.ECHO_DRUSE_STAGE3_ITEM.get());
                 output.accept(ItemRegistry.ECHO_DRUSE_STAGE4_ITEM.get());
+                output.accept(PotionContents.createItemStack(Items.POTION, PotionRegistry.SCULK_INTRUSION));
+                output.accept(PotionContents.createItemStack(Items.SPLASH_POTION, PotionRegistry.SCULK_INTRUSION));
+                output.accept(PotionContents.createItemStack(Items.LINGERING_POTION, PotionRegistry.SCULK_INTRUSION));
             }).build());
 }

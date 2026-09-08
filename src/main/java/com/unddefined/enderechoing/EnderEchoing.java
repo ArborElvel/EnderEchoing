@@ -41,6 +41,7 @@ public class EnderEchoing {
         EntityRegistry.ENTITIES.register(modEventBus);
         CreativeModeTabRegistry.CREATIVE_MODE_TABS.register(modEventBus);
         MobEffectRegistry.MOB_EFFECTS.register(modEventBus);
+        PotionRegistry.POTIONS.register(modEventBus);
         ModSoundEvents.SOUND_EVENTS.register(modEventBus);
         ParticlesRegistry.PARTICLE_TYPES.register(modEventBus);
         DataRegistry.COMPONENT_TYPES.register(modEventBus);
