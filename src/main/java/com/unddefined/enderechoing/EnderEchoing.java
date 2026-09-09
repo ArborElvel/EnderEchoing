@@ -3,6 +3,7 @@ package com.unddefined.enderechoing;
 import com.mojang.logging.LogUtils;
 import com.unddefined.enderechoing.client.ModSoundEvents;
 import com.unddefined.enderechoing.client.gui.TunerMenu;
+import com.unddefined.enderechoing.entities.SculkSpreaderEntity;
 import com.unddefined.enderechoing.server.registry.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -13,6 +14,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
+import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.slf4j.Logger;
 
@@ -47,5 +49,10 @@ public class EnderEchoing {
         DataRegistry.COMPONENT_TYPES.register(modEventBus);
         DataRegistry.ATTACHMENT_TYPES.register(modEventBus);
         MENUS.register(modEventBus);
+        modEventBus.addListener(EnderEchoing::registerEntityAttributes);
+    }
+
+    private static void registerEntityAttributes(EntityAttributeCreationEvent event) {
+        event.put(EntityRegistry.SCULK_SPREADER_ENTITY.get(), SculkSpreaderEntity.createAttributes().build());
     }
 }

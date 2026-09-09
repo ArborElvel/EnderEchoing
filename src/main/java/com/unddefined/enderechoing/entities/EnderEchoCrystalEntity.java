@@ -47,9 +47,9 @@ public class EnderEchoCrystalEntity extends Entity implements GeoEntity {
         } else {
             if (!this.isRemoved() && !this.level().isClientSide) {
                 this.remove(RemovalReason.KILLED);
+                this.level().removeBlock(this.entityData.get(OWNER_POS), false);
                 if (!source.is(DamageTypeTags.IS_EXPLOSION)) {
                     DamageSource d = source.getEntity() != null ? this.damageSources().explosion(this, source.getEntity()) : null;
-                    this.level().removeBlock(this.entityData.get(OWNER_POS), false);
                     this.level().explode(this, d, null, this.getX(), this.getY(), this.getZ(), 6.0F, false, Level.ExplosionInteraction.BLOCK);
                 }
 //                this.onDestroyedBy(source);
@@ -65,7 +65,7 @@ public class EnderEchoCrystalEntity extends Entity implements GeoEntity {
 
     @Override
     protected void readAdditionalSaveData(CompoundTag tag) {
-        if (tag.contains("OwnerPos")) this.entityData.set(OWNER_POS,BlockPos.of(tag.getLong("OwnerPos")));
+        if (tag.contains("OwnerPos")) this.entityData.set(OWNER_POS, BlockPos.of(tag.getLong("OwnerPos")));
     }
 
     @Override

@@ -5,6 +5,7 @@ import com.unddefined.enderechoing.client.gui.screen.TunerScreen;
 import com.unddefined.enderechoing.client.particles.ParticleDirectlyMovingDust;
 import com.unddefined.enderechoing.client.renderer.block.*;
 import com.unddefined.enderechoing.client.renderer.entity.EnderEchoCrystalEntityRenderer;
+import com.unddefined.enderechoing.client.renderer.entity.SculkSpreaderEntityRenderer;
 import com.unddefined.enderechoing.server.registry.BlockEntityRegistry;
 import com.unddefined.enderechoing.server.registry.EntityRegistry;
 import com.unddefined.enderechoing.server.registry.ParticlesRegistry;
@@ -92,6 +93,7 @@ public class EnderEchoingClient {
     @SubscribeEvent
     public static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(EntityRegistry.ENDER_ECHO_CRYSTAL_ENTITY.get(), EnderEchoCrystalEntityRenderer::new);
+        event.registerEntityRenderer(EntityRegistry.SCULK_SPREADER_ENTITY.get(), SculkSpreaderEntityRenderer::new);
         event.registerEntityRenderer(EntityRegistry.ENDER_ECHOING_EYE_ENTITY.get(),
                 c -> new ThrownItemRenderer<>(c, 1.0F, true));
     }
