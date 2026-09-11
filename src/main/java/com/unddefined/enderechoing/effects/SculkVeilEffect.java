@@ -19,7 +19,7 @@ import static com.unddefined.enderechoing.server.registry.MobEffectRegistry.SCUL
 
 public class SculkVeilEffect extends MobEffect {
     private static final int DEBUFF_INTERVAL = 60;
-    private static final long FIVE_MINUTES = 6000;
+    private static final long DARKNESS_LINE = 20 * 60 * 3;
 
     public SculkVeilEffect() {
         super(MobEffectCategory.BENEFICIAL, 0x4215441);
@@ -38,7 +38,7 @@ public class SculkVeilEffect extends MobEffect {
             }
             livingEntity.setData(DataRegistry.SCULK_VEIL_START, now);
             livingEntity.setData(DataRegistry.SCULK_VEIL_LAST_TICK, now);
-            if (total >= FIVE_MINUTES) applyPermanentDarkness(livingEntity);
+            if (total >= DARKNESS_LINE) applyPermanentDarkness(livingEntity);
         }
         // 检查实体是否发光，如果发光则不应用影匿效果
         if (livingEntity.isCurrentlyGlowing()) {
@@ -74,8 +74,8 @@ public class SculkVeilEffect extends MobEffect {
             long glowingTotal = entity.getData(DataRegistry.GLOWING_TOTAL);
             long glowingStart = entity.getData(DataRegistry.GLOWING_START);
             if (glowingStart >= 0) glowingTotal += now - glowingStart + 1;
-            if (start >= 0 && entity.getData(DataRegistry.SCULK_VEIL_TOTAL) + now - start + 1 - glowingTotal >= FIVE_MINUTES) {
-                entity.setData(DataRegistry.SCULK_VEIL_TOTAL, FIVE_MINUTES);
+            if (start >= 0 && entity.getData(DataRegistry.SCULK_VEIL_TOTAL) + now - start + 1 - glowingTotal >= DARKNESS_LINE) {
+                entity.setData(DataRegistry.SCULK_VEIL_TOTAL, DARKNESS_LINE);
                 applyPermanentDarkness(entity);
             }
             MobEffectInstance veil = entity.getEffect(MobEffectRegistry.SCULK_VEIL);

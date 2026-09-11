@@ -17,12 +17,16 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.EntitySelector;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.EnderMan;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.monster.warden.Warden;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.Potions;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.AABB;
@@ -35,6 +39,7 @@ import net.neoforged.neoforge.event.brewing.RegisterBrewingRecipesEvent;
 import net.neoforged.neoforge.event.entity.living.*;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.level.BlockDropsEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
@@ -51,12 +56,16 @@ import static com.unddefined.enderechoing.effects.TinnitusEffect.tinnitus_modifi
 import static com.unddefined.enderechoing.server.registry.BlockRegistry.ENDER_ECHOIC_RESONATOR;
 import static com.unddefined.enderechoing.server.registry.DataRegistry.*;
 import static com.unddefined.enderechoing.server.registry.MobEffectRegistry.*;
+import static com.unddefined.enderechoing.server.registry.TagRegistry.SCULK_BLOCKS;
 import static net.minecraft.world.effect.MobEffects.DARKNESS;
 import static net.minecraft.world.effect.MobEffects.GLOWING;
 import static net.minecraft.world.entity.ai.attributes.Attributes.*;
 
 @EventBusSubscriber(modid = EnderEchoing.MODID)
 public class ServerEvents {
+    private static final float SCULK_MATTER_BLOCK_DROP_CHANCE = 0.10F;
+    private static final float FORTUNE_BLOCK_DROP_CHANCE = 0.10F;
+
     @SubscribeEvent
     public static void onRegisterBrewingRecipes(RegisterBrewingRecipesEvent event) {
         // 幽匿脉络 + 粗制药水 → 幽匿侵扰药水
@@ -104,6 +113,24 @@ public class ServerEvents {
         // 与原版一样遵守 doMobLoot 规则
         if (!level.getGameRules().getBoolean(GameRules.RULE_DOMOBLOOT)) return;
         sculkMob.dropSculkMobLoot(level, event.getSource(), event.getDrops());
+    }
+
+    /** 破坏幽匿系方块时按概率掉落一个幽匿物质，概率受时运影响。 */
+    @SubscribeEvent
+    public static void onSculkBlockDrops(BlockDropsEvent event) {
+        if (!event.getState().is(SCULK_BLOCKS)) return;
+
+        var fortune = event.getLevel().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
+                .getOrThrow(Enchantments.FORTUNE);
+        int fortuneLevel = EnchantmentHelper.getItemEnchantmentLevel(fortune, event.getTool());
+        float chance = Math.min(1.0F, SCULK_MATTER_BLOCK_DROP_CHANCE + fortuneLevel * FORTUNE_BLOCK_DROP_CHANCE);
+        if (event.getLevel().getRandom().nextFloat() >= chance) return;
+
+        ItemEntity drop = new ItemEntity(event.getLevel(), event.getPos().getX() + 0.5,
+                event.getPos().getY() + 0.5, event.getPos().getZ() + 0.5,
+                new ItemStack(ItemRegistry.SCULK_MATTER.get()));
+        drop.setDefaultPickUpDelay();
+        event.getDrops().add(drop);
     }
 
     /** 驱动尚未结束的幽匿绽放 */
