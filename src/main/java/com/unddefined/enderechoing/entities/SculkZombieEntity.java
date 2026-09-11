@@ -7,8 +7,6 @@ import net.minecraft.world.level.Level;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
-import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 public class SculkZombieEntity extends Zombie implements GeoEntity {
@@ -24,14 +22,8 @@ public class SculkZombieEntity extends Zombie implements GeoEntity {
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "controller", 1,
-                state -> {
-                    SculkZombieEntity self = state.getAnimatable();
-                    boolean moving = state.isMoving() || self.getDeltaMovement().horizontalDistanceSqr() > 1.0E-4;
-                    return moving
-                            ? state.setAndContinue(RawAnimation.begin().thenLoop("walk"))
-                            : state.setAndContinue(RawAnimation.begin().thenLoop("idle"));
-                }));
+        // 姿势完全由客户端的 SculkZombieCemAnimator 计算（CEM 公式本身包含待机/行走/攻击/受伤），
+        // 因此不注册关键帧动画控制器
     }
 
     @Override
