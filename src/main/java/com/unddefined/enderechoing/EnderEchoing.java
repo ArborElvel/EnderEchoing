@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import com.unddefined.enderechoing.client.ModSoundEvents;
 import com.unddefined.enderechoing.client.gui.TunerMenu;
 import com.unddefined.enderechoing.entities.SculkSpreaderEntity;
+import com.unddefined.enderechoing.entities.SculkZombieEntity;
 import com.unddefined.enderechoing.server.registry.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -54,5 +55,6 @@ public class EnderEchoing {
 
     private static void registerEntityAttributes(EntityAttributeCreationEvent event) {
         event.put(EntityRegistry.SCULK_SPREADER_ENTITY.get(), SculkSpreaderEntity.createAttributes().build());
+        event.put(EntityRegistry.SCULK_ZOMBIE_ENTITY.get(), SculkZombieEntity.createAttributes().build());
     }
 }

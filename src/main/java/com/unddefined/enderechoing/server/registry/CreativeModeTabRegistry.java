@@ -30,6 +30,7 @@ public class CreativeModeTabRegistry {
                 output.accept(ItemRegistry.ENDER_ECHOING_PEARL.get());
                 output.accept(ItemRegistry.ENDER_ECHOING_EYE.get());
                 output.accept(ItemRegistry.SCULK_SPREADER_SPAWN_EGG.get());
+                output.accept(ItemRegistry.SCULK_ZOMBIE_SPAWN_EGG.get());
                 output.accept(ItemRegistry.ECHO_DRUSE.get());
                 output.accept(ItemRegistry.WHISPER_DRUSE.get());
                 output.accept(Items.SCULK);

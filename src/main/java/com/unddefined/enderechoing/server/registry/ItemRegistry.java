@@ -25,6 +25,8 @@ public class ItemRegistry {
     public static final DeferredItem<Item> ENDER_ECHOING_EYE = ITEMS.registerItem("ender_echoing_eye", EnderEchoingEye::new);
     public static final DeferredItem<SpawnEggItem> SCULK_SPREADER_SPAWN_EGG = ITEMS.registerItem("sculk_spreader_spawn_egg",
             props -> new DeferredSpawnEggItem(EntityRegistry.SCULK_SPREADER_ENTITY, 0xFFFFFF, 0xFFFFFF, props));
+    public static final DeferredItem<SpawnEggItem> SCULK_ZOMBIE_SPAWN_EGG = ITEMS.registerItem("sculk_zombie_spawn_egg",
+            props -> new DeferredSpawnEggItem(EntityRegistry.SCULK_ZOMBIE_ENTITY, 0xFFFFFF, 0xFFFFFF, props));
     public static final DeferredItem<Item> WARP_CORE = ITEMS.registerItem("warp_core", WarpCore::new);
     public static final DeferredItem<Item> RHYME_SHARD = ITEMS.registerSimpleItem("rhyme_shard", new Item.Properties()
             .rarity(Rarity.UNCOMMON).component(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true));
