@@ -8,6 +8,7 @@ import com.unddefined.enderechoing.client.particles.EchoResponding;
 import com.unddefined.enderechoing.client.particles.EchoResponse;
 import com.unddefined.enderechoing.client.particles.EchoSounding;
 import com.unddefined.enderechoing.network.packet.TeleportRequestPacket;
+import com.unddefined.enderechoing.server.ShadowNight;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.core.BlockPos;
@@ -57,7 +58,8 @@ public class EchoRenderer {
         if (mc.player == null) return;
         float PartialTicks = event.getPartialTick().getGameTimeDeltaTicks();
         boolean hasEffect = mc.player.hasEffect(SCULK_VEIL);
-        boolean inDeepDark = mc.level.getBiome(mc.player.blockPosition()).is(Biomes.DEEP_DARK);
+        boolean inDeepDark = mc.level.getBiome(mc.player.blockPosition()).is(Biomes.DEEP_DARK)
+                || ShadowNight.isActive(mc.level);
         boolean hasIntrusion = mc.player.hasEffect(SCULK_INTRUSION);
         // 深暗之域掩码重建：渲染线程执行（避免跨线程读 mc.level），
         // 每 100 tick 或移动 64 格重建一次。

@@ -3,6 +3,7 @@ package com.unddefined.enderechoing.entities;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.level.Level;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -11,7 +12,7 @@ import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
-public class SculkSpreaderEntity extends PathfinderMob implements GeoEntity, SculkMob {
+public class SculkSpreaderEntity extends Monster implements GeoEntity, SculkMob {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     /** 幽匿系方块上的回血剩余计时（tick），见 {@link SculkMob#tickSculkRegeneration(int)}。 */
     private int sculkHealCooldown;

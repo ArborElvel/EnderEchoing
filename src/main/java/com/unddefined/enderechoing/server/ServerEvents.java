@@ -88,7 +88,7 @@ public class ServerEvents {
         double radius = SculkIntrusionSpreader.FOLLOW_RADIUS;
         var host = level.getEntitiesOfClass(LivingEntity.class, AABB.ofSize(deathPos, radius * 2, radius * 2, radius * 2),
                 h -> h.isAlive() && (h.hasEffect(SCULK_INTRUSION) || h instanceof Warden)
-                        && SculkIntrusionSpreader.followBox(h).contains(deathPos)).getFirst();
+                        && SculkIntrusionSpreader.followBox(h).contains(deathPos)).stream().findFirst().orElse(null);
         if (host == null) return;
         // 附近有可用的幽匿催发体时让给它：它会在派发阶段吃掉这份死亡经验
         if (SculkIntrusionSpreader.hasUsableCatalystNearby(level, deathPos)) return;

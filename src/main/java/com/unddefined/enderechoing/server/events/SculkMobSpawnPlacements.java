@@ -1,6 +1,7 @@
 package com.unddefined.enderechoing.server.events;
 
 import com.unddefined.enderechoing.entities.SculkMob;
+import com.unddefined.enderechoing.server.ShadowNight;
 import com.unddefined.enderechoing.server.registry.EntityRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
@@ -9,6 +10,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.SpawnPlacementTypes;
+import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.biome.Biomes;
@@ -20,7 +22,7 @@ import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent;
  *
  * <p>生成条目由数据包 {@code data/enderechoing/neoforge/biome_modifier/sculk_mobs.json} 加进主世界
  * 所有生物群系（{@code #minecraft:is_overworld}）的 MONSTER 列表，具体位置与概率由
- * {@link #checkSculkMobSpawnRules} 决定：亮度小于 {@value #MAX_SPAWN_LIGHT} 才算黑暗；
+ * {@link #checkSculkMobSpawnRules} 决定。
  * 附近有幽匿系方块（{@link SculkMob#isSculkBlock}）时按 {@value #SPAWN_CHANCE_NEAR_SCULK}
  * 大概率生成，其余黑暗处只有 {@value #SPAWN_CHANCE} 的小概率。
  *
@@ -29,17 +31,18 @@ import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent;
  * 深暗之域的概率再乘 {@value #DEEP_DARK_CHANCE_FACTOR} 压低。
  */
 public class SculkMobSpawnPlacements {
-    /** 黑暗判定：生成位置亮度（0~15）必须小于该值。 */
-    public static final int MAX_SPAWN_LIGHT = 3;
 
     /** 附近没有幽匿系方块时的生成概率。 */
-    public static final float SPAWN_CHANCE = 0.05F;
+    public static final float SPAWN_CHANCE = 0.2F;
 
     /** 附近有幽匿系方块时的生成概率。 */
-    public static final float SPAWN_CHANCE_NEAR_SCULK = 0.6F;
+    public static final float SPAWN_CHANCE_NEAR_SCULK = 0.8F;
 
     /** 深暗之域的概率倍率：原版这里不刷任何生物，折中保留但明显压低。 */
     public static final float DEEP_DARK_CHANCE_FACTOR = 0.1F;
+
+    /** 幽影之夜提高幽匿生物自然生成判定的倍率。 */
+    public static final float SHADOW_NIGHT_CHANCE_FACTOR = 7.0F;
 
     /** 检测幽匿系方块的水平半径（方块数），竖直方向取脚下一格到头上一格。 */
     private static final int SCULK_CHECK_RADIUS = 2;
@@ -68,12 +71,12 @@ public class SculkMobSpawnPlacements {
         // 刷怪笼、结构、刷怪蛋等不受"黑暗 + 小概率"限制，避免这些生成方式失效
         if (MobSpawnType.ignoresLightRequirements(spawnType)) return true;
 
-        // 只有足够黑才会生成
-        if (level.getMaxLocalRawBrightness(pos) >= MAX_SPAWN_LIGHT) return false;
+        if (Monster.isDarkEnoughToSpawn(level, pos, random)) return false;
 
         float chance = hasSculkBlockNearby(level, pos) ? SPAWN_CHANCE_NEAR_SCULK : SPAWN_CHANCE;
         if (isDeepDark(level, pos)) chance *= DEEP_DARK_CHANCE_FACTOR;
-        return random.nextFloat() < chance;
+        if (ShadowNight.isActive(level)) chance *= SHADOW_NIGHT_CHANCE_FACTOR;
+        return random.nextFloat() < Math.min(1.0F, chance);
     }
 
     /** 生成位置是否位于深暗之域 */
