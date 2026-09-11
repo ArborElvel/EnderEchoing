@@ -13,6 +13,7 @@
       "bones": [
         {
           "name": "head",
+          "parent": "body",
           "pivot": [0, 24, 0],
           "cubes": [
             {
@@ -58,6 +59,7 @@
         },
         {
           "name": "headwear",
+          "parent": "body",
           "pivot": [0, 24, 0],
           "cubes": [
             {
@@ -149,6 +151,7 @@
         },
         {
           "name": "left_arm",
+          "parent": "body",
           "pivot": [5, 22, 0],
           "mirror": true,
           "cubes": [
@@ -180,6 +183,7 @@
         },
         {
           "name": "right_arm",
+          "parent": "body",
           "pivot": [-5, 22, 0],
           "cubes": [
             {

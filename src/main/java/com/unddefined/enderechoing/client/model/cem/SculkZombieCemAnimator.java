@@ -22,6 +22,10 @@ import software.bernie.geckolib.model.GeoModel;
  *
  * <p>{@code var.aggroA} / {@code var.att} 是跨帧变量，按实体保存在 {@link CemFrame} 的状态里；
  * 腿部的 {@code right_leg.rx} 这类自引用在 CEM 中读到的是上一帧的值，这里同样用跨帧变量实现。
+ *
+ * <p>geo.json 里 {@code head / headwear / left_arm / right_arm} 是 {@code body} 的子骨骼，
+ * 这样身体前倾时头和手臂会跟着走（CEM 里这些部位挂在原版模型的同级骨骼上，旋转不会互相带动）。
+ * 位移仍按 CEM 的绝对坐标来：写入子骨骼时减掉 {@code body} 的位移，父子叠加后与公式一致。
  */
 public final class SculkZombieCemAnimator extends CemAnimator<SculkZombieEntity> {
 
@@ -134,11 +138,17 @@ public final class SculkZombieCemAnimator extends CemAnimator<SculkZombieEntity>
         float headTz = (-Mth.sin(breathPhase) / 4.0F + Mth.sin(-Mth.PI * swingProgress) * 2.0F) / headScale;
         headTz += limbSpeed >= 0.6F ? 0.0F : -Mth.cos(swayPhase * 2.0F) * limbSpeed;
 
-        setTranslation(head, headTx, headTy, headTz);
+        // body.tx = head.tx, body.ty = head.ty * if(is_child, 1.3, 1), body.tz = head.tz
+        float bodyTx = headTx;
+        float bodyTy = headTy * (child ? 1.3F : 1.0F);
+        float bodyTz = headTz;
+
+        // head 挂在 body 下，减掉 body 的位移后父子叠加的结果仍是 CEM 的绝对值
+        setTranslation(head, headTx - bodyTx, headTy - bodyTy, headTz - bodyTz);
 
         if (headwear != null) {
             // headwear.tx/ty/tz = head.tx/ty/tz * if(is_child, 1.5, 1)
-            setTranslation(headwear, headTx * headScale, headTy * headScale, headTz * headScale);
+            setTranslation(headwear, headTx * headScale - bodyTx, headTy * headScale - bodyTy, headTz * headScale - bodyTz);
         }
 
         // body.rx / ry / rz
@@ -159,7 +169,7 @@ public final class SculkZombieCemAnimator extends CemAnimator<SculkZombieEntity>
         setRotation(body, bodyRx, bodyRy, bodyRz);
 
         // body.tx = head.tx, body.ty = head.ty * if(is_child, 1.3, 1), body.tz = head.tz
-        setTranslation(body, headTx, headTy * (child ? 1.3F : 1.0F), headTz);
+        setTranslation(body, bodyTx, bodyTy, bodyTz);
 
         // ---------- left_arm / right_arm ----------
         float armDivisor = child ? 4.0F : 6.0F;
@@ -224,8 +234,9 @@ public final class SculkZombieCemAnimator extends CemAnimator<SculkZombieEntity>
                 + (limbSpeed >= 0.6F ? 0.0F : -Mth.cos(swayPhase * 2.0F) * limbSpeed)
                 - Mth.sin(Mth.PI * swingProgress) * 4.0F;
 
-        setTranslation(rightArm, armTx, armTy, armTz + rad(clampedYaw));
-        setTranslation(leftArm, armTx, armTy, armTz - rad(clampedYaw));
+        // 手臂同样是 body 的子骨骼，减掉 body 的位移（CEM 公式里的 ±5.1 与 body.tx/ty 由父子关系承担）
+        setTranslation(rightArm, armTx - bodyTx, armTy - bodyTy, armTz + rad(clampedYaw) - bodyTz);
+        setTranslation(leftArm, armTx - bodyTx, armTy - bodyTy, armTz - rad(clampedYaw) - bodyTz);
 
         // ---------- left_leg / right_leg ----------
         float legLift = Mth.clamp(limbSpeed * 1.5F, 0.0F, 1.0F);
