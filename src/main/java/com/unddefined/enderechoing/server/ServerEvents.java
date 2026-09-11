@@ -2,6 +2,7 @@ package com.unddefined.enderechoing.server;
 
 import com.unddefined.enderechoing.EnderEchoing;
 import com.unddefined.enderechoing.blocks.EnderEchoCrystalBlock;
+import com.unddefined.enderechoing.entities.SculkMob;
 import com.unddefined.enderechoing.server.DataComponents.EnderEchoCrystalSavedData;
 import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
 import com.unddefined.enderechoing.server.registry.ItemRegistry;
@@ -22,6 +23,7 @@ import net.minecraft.world.entity.monster.warden.Warden;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.Potions;
+import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -30,13 +32,12 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.neoforged.neoforge.event.VanillaGameEvent;
 import net.neoforged.neoforge.event.brewing.RegisterBrewingRecipesEvent;
-import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
-import net.neoforged.neoforge.event.entity.living.LivingEvent;
-import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
-import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
+import net.neoforged.neoforge.event.entity.living.*;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import top.theillusivec4.curios.api.CuriosApi;
 
@@ -86,6 +87,34 @@ public class ServerEvents {
         host.getData(SCULK_SPREADER).absorbEntityDeath(level, host, deathPos, xp);
         dead.skipDropExperience();
 
+    }
+
+    /** 幽匿生物死亡时，按概率在死亡位置原地绽放一次幽匿催发体效果 */
+    @SubscribeEvent
+    public static void onSculkMobDeath(LivingDeathEvent event) {
+        if (event.getEntity() instanceof SculkMob sculkMob) sculkMob.triggerSculkBloomOnDeath();
+    }
+
+    /** 幽匿生物的基础掉落（echo_shard、sculk_matter 等），抢夺附魔只提高掉落率 */
+    @SubscribeEvent
+    public static void onSculkMobDrops(LivingDropsEvent event) {
+        if (!(event.getEntity() instanceof SculkMob sculkMob)) return;
+        if (!(event.getEntity().level() instanceof ServerLevel level)) return;
+        // 与原版一样遵守 doMobLoot 规则
+        if (!level.getGameRules().getBoolean(GameRules.RULE_DOMOBLOOT)) return;
+        sculkMob.dropSculkMobLoot(level, event.getSource(), event.getDrops());
+    }
+
+    /** 驱动尚未结束的幽匿绽放 */
+    @SubscribeEvent
+    public static void onLevelTick(LevelTickEvent.Post event) {
+        if (event.getLevel() instanceof ServerLevel level) SculkBloom.serverTick(level);
+    }
+
+    /** 维度卸载时丢弃其上未完成的幽匿绽放 */
+    @SubscribeEvent
+    public static void onLevelUnload(LevelEvent.Unload event) {
+        if (event.getLevel() instanceof ServerLevel level) SculkBloom.discard(level);
     }
 
     /**

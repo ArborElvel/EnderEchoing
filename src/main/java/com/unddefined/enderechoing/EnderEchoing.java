@@ -5,6 +5,7 @@ import com.unddefined.enderechoing.client.ModSoundEvents;
 import com.unddefined.enderechoing.client.gui.TunerMenu;
 import com.unddefined.enderechoing.entities.SculkSpreaderEntity;
 import com.unddefined.enderechoing.entities.SculkZombieEntity;
+import com.unddefined.enderechoing.server.events.SculkMobSpawnPlacements;
 import com.unddefined.enderechoing.server.registry.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -51,6 +52,7 @@ public class EnderEchoing {
         DataRegistry.ATTACHMENT_TYPES.register(modEventBus);
         MENUS.register(modEventBus);
         modEventBus.addListener(EnderEchoing::registerEntityAttributes);
+        modEventBus.addListener(SculkMobSpawnPlacements::registerSpawnPlacements);
     }
 
     private static void registerEntityAttributes(EntityAttributeCreationEvent event) {

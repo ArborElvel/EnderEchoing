@@ -2,15 +2,13 @@ package com.unddefined.enderechoing.mixin;
 
 import com.unddefined.enderechoing.Config;
 import com.unddefined.enderechoing.blocks.entity.EchoDruseBlockEntity;
+import com.unddefined.enderechoing.server.SculkBloom;
 import com.unddefined.enderechoing.server.registry.BlockRegistry;
 import net.minecraft.Optionull;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.SculkCatalystBlock;
@@ -85,13 +83,6 @@ public class CatalystListenerMixin {
         BlockState catalystState = level.getBlockState(catalystPos);
         level.setBlock(catalystPos, catalystState.setValue(SculkCatalystBlock.PULSE, Boolean.TRUE), 3);
         level.scheduleTick(catalystPos, catalystState.getBlock(), 8);
-        level.sendParticles(ParticleTypes.SCULK_SOUL,
-                (double) catalystPos.getX() + 0.5,
-                (double) catalystPos.getY() + 1.15,
-                (double) catalystPos.getZ() + 0.5,
-                2, 0.2, 0.0, 0.2, 0.0
-        );
-        level.playSound(null, catalystPos, SoundEvents.SCULK_CATALYST_BLOOM, SoundSource.BLOCKS, 2.0F, 0.6F + level.getRandom().nextFloat() * 0.4F);
-
+        SculkBloom.playBloomEffects(level, catalystPos);
     }
 }

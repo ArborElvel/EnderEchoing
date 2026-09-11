@@ -1,10 +1,7 @@
 package com.unddefined.enderechoing.server;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SculkSpreader;
@@ -37,7 +34,7 @@ public class SculkIntrusionSpreader {
         AABB box = followBox(owner);
         pullEscapedCursorsBack(box);
         if (!spreader.getCursors().isEmpty()) {
-            spreader.updateCursors(level, owner.blockPosition(), level.getRandom(), true);
+            SculkBloom.tickSpreader(level, owner.blockPosition(), spreader);
             // 本次蔓延可能再次走出作用盒，同样只把 position 放回盒内
             pullEscapedCursorsBack(box);
         }
@@ -69,16 +66,8 @@ public class SculkIntrusionSpreader {
 
     /** ENTITY_DIE 命中主体作用盒：把死亡经验转为 cursor 电荷，并模仿催发体绽放 */
     public void absorbEntityDeath(ServerLevel level, LivingEntity owner, Vec3 deathPos, int xp) {
-        spreader.addCursors(BlockPos.containing(deathPos.x, deathPos.y + 0.5, deathPos.z), xp);
-        var catalystPos = owner.blockPosition();
-        level.sendParticles(ParticleTypes.SCULK_SOUL,
-                (double) catalystPos.getX() + 0.5,
-                (double) catalystPos.getY() + 1.15,
-                (double) catalystPos.getZ() + 0.5,
-                2, 0.2, 0.0, 0.2, 0.0
-        );
-        level.playSound(null, catalystPos, SoundEvents.SCULK_CATALYST_BLOOM, SoundSource.BLOCKS, 2.0F, 0.6F + level.getRandom().nextFloat() * 0.4F);
-
+        spreader.addCursors(SculkBloom.bloomOrigin(deathPos), xp);
+        SculkBloom.playBloomEffects(level, owner.blockPosition());
     }
 
     /** 死亡点监听半径内是否有可用的幽匿催发体（半径与原版 CatalystListener 一致为 8） */

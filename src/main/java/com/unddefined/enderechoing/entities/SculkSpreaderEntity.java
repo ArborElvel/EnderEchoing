@@ -11,8 +11,10 @@ import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
-public class SculkSpreaderEntity extends PathfinderMob implements GeoEntity {
+public class SculkSpreaderEntity extends PathfinderMob implements GeoEntity, SculkMob {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    /** 幽匿系方块上的回血剩余计时（tick），见 {@link SculkMob#tickSculkRegeneration(int)}。 */
+    private int sculkHealCooldown;
 
     public SculkSpreaderEntity(EntityType<SculkSpreaderEntity> entityType, Level level) {
         super(entityType, level);
@@ -20,6 +22,17 @@ public class SculkSpreaderEntity extends PathfinderMob implements GeoEntity {
 
     public static AttributeSupplier.Builder createAttributes() {
         return PathfinderMob.createMobAttributes();
+    }
+
+    @Override
+    public void aiStep() {
+        super.aiStep();
+        // 阳光直射下获得虚弱与缓慢
+        applySunlightDebuffs();
+        // 站在幽匿系方块上时按亮度反比缓慢回血
+        sculkHealCooldown = tickSculkRegeneration(sculkHealCooldown);
+        // 站在幽匿系方块上时临时提高移动速度与生命上限
+        tickSculkBlockBonus();
     }
 
     @Override

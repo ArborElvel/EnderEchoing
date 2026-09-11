@@ -29,10 +29,9 @@ public class CreativeModeTabRegistry {
                 output.accept(ItemRegistry.RHYME_SHARD.get());
                 output.accept(ItemRegistry.ENDER_ECHOING_PEARL.get());
                 output.accept(ItemRegistry.ENDER_ECHOING_EYE.get());
-                output.accept(ItemRegistry.SCULK_SPREADER_SPAWN_EGG.get());
-                output.accept(ItemRegistry.SCULK_ZOMBIE_SPAWN_EGG.get());
                 output.accept(ItemRegistry.ECHO_DRUSE.get());
                 output.accept(ItemRegistry.WHISPER_DRUSE.get());
+                output.accept(ItemRegistry.SCULK_MATTER.get());
                 output.accept(Items.SCULK);
                 output.accept(Items.SCULK_VEIN);
                 output.accept(Items.SCULK_CATALYST);
@@ -48,5 +47,7 @@ public class CreativeModeTabRegistry {
                 output.accept(PotionContents.createItemStack(Items.POTION, PotionRegistry.SCULK_INTRUSION));
                 output.accept(PotionContents.createItemStack(Items.SPLASH_POTION, PotionRegistry.SCULK_INTRUSION));
                 output.accept(PotionContents.createItemStack(Items.LINGERING_POTION, PotionRegistry.SCULK_INTRUSION));
+                output.accept(ItemRegistry.SCULK_SPREADER_SPAWN_EGG.get());
+                output.accept(ItemRegistry.SCULK_ZOMBIE_SPAWN_EGG.get());
             }).build());
 }

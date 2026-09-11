@@ -1,5 +1,6 @@
 package com.unddefined.enderechoing.effects;
 
+import com.unddefined.enderechoing.entities.SculkMob;
 import com.unddefined.enderechoing.server.registry.MobEffectRegistry;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.effect.MobEffect;
@@ -37,10 +38,11 @@ public class SculkVeilEffect extends MobEffect {
 
         //remove aggro from anything targeting us
         livingEntity.level().getNearbyEntities(Mob.class, targetingCondition, livingEntity, livingEntity.getBoundingBox().inflate(40D))
-                .forEach(entityTargetingCaster -> {
-                    entityTargetingCaster.setTarget(null);
-                    entityTargetingCaster.targetSelector.getAvailableGoals().forEach(WrappedGoal::stop);
-                    entityTargetingCaster.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
+                .stream().filter(e -> !(e instanceof SculkMob))
+                .forEach(e -> {
+                    e.setTarget(null);
+                    e.targetSelector.getAvailableGoals().forEach(WrappedGoal::stop);
+                    e.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
                 });
     }
 

@@ -1,0 +1,97 @@
+package com.unddefined.enderechoing.server.events;
+
+import com.unddefined.enderechoing.entities.SculkMob;
+import com.unddefined.enderechoing.server.registry.EntityRegistry;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.Difficulty;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.SpawnPlacementTypes;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.biome.Biomes;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent;
+
+/**
+ * 幽匿生物的自然生成规则。
+ *
+ * <p>生成条目由数据包 {@code data/enderechoing/neoforge/biome_modifier/sculk_mobs.json} 加进主世界
+ * 所有生物群系（{@code #minecraft:is_overworld}）的 MONSTER 列表，具体位置与概率由
+ * {@link #checkSculkMobSpawnRules} 决定：亮度小于 {@value #MAX_SPAWN_LIGHT} 才算黑暗；
+ * 附近有幽匿系方块（{@link SculkMob#isSculkBlock}）时按 {@value #SPAWN_CHANCE_NEAR_SCULK}
+ * 大概率生成，其余黑暗处只有 {@value #SPAWN_CHANCE} 的小概率。
+ *
+ * <p>深暗之域折中：原版该生物群系没有任何生成条目（不刷任何生物），{@code add_spawns} 会连空列表
+ * 一起补上，所以那里只有幽匿生物这两个条目、没有别的怪物分摊权重。为了不把监守者的地盘填满，
+ * 深暗之域的概率再乘 {@value #DEEP_DARK_CHANCE_FACTOR} 压低。
+ */
+public class SculkMobSpawnPlacements {
+    /** 黑暗判定：生成位置亮度（0~15）必须小于该值。 */
+    public static final int MAX_SPAWN_LIGHT = 3;
+
+    /** 附近没有幽匿系方块时的生成概率。 */
+    public static final float SPAWN_CHANCE = 0.05F;
+
+    /** 附近有幽匿系方块时的生成概率。 */
+    public static final float SPAWN_CHANCE_NEAR_SCULK = 0.6F;
+
+    /** 深暗之域的概率倍率：原版这里不刷任何生物，折中保留但明显压低。 */
+    public static final float DEEP_DARK_CHANCE_FACTOR = 0.1F;
+
+    /** 检测幽匿系方块的水平半径（方块数），竖直方向取脚下一格到头上一格。 */
+    private static final int SCULK_CHECK_RADIUS = 2;
+
+    public static void registerSpawnPlacements(RegisterSpawnPlacementsEvent event) {
+        event.register(EntityRegistry.SCULK_ZOMBIE_ENTITY.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, SculkMobSpawnPlacements::checkSculkMobSpawnRules,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(EntityRegistry.SCULK_SPREADER_ENTITY.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, SculkMobSpawnPlacements::checkSculkMobSpawnRules,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+    }
+
+    /**
+     * 幽匿生物的自然生成判定。
+     *
+     * @return 允许在该位置生成返回 {@code true}
+     */
+    private static <T extends Mob> boolean checkSculkMobSpawnRules(EntityType<T> type, ServerLevelAccessor level,
+                                                                   MobSpawnType spawnType, BlockPos pos, RandomSource random) {
+        if (level.getDifficulty() == Difficulty.PEACEFUL) return false;
+
+        // 与普通怪物一样需要合法的支撑方块
+        if (!Mob.checkMobSpawnRules(type, level, spawnType, pos, random)) return false;
+
+        // 刷怪笼、结构、刷怪蛋等不受"黑暗 + 小概率"限制，避免这些生成方式失效
+        if (MobSpawnType.ignoresLightRequirements(spawnType)) return true;
+
+        // 只有足够黑才会生成
+        if (level.getMaxLocalRawBrightness(pos) >= MAX_SPAWN_LIGHT) return false;
+
+        float chance = hasSculkBlockNearby(level, pos) ? SPAWN_CHANCE_NEAR_SCULK : SPAWN_CHANCE;
+        if (isDeepDark(level, pos)) chance *= DEEP_DARK_CHANCE_FACTOR;
+        return random.nextFloat() < chance;
+    }
+
+    /** 生成位置是否位于深暗之域 */
+    private static boolean isDeepDark(LevelAccessor level, BlockPos pos) {
+        return level.getBiome(pos).is(Biomes.DEEP_DARK);
+    }
+
+    /** 生成位置附近（水平半径 {@value #SCULK_CHECK_RADIUS}、上下各一格）是否出现幽匿系方块 */
+    private static boolean hasSculkBlockNearby(LevelAccessor level, BlockPos origin) {
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        for (int y = -1; y <= 1; y++) {
+            for (int x = -SCULK_CHECK_RADIUS; x <= SCULK_CHECK_RADIUS; x++) {
+                for (int z = -SCULK_CHECK_RADIUS; z <= SCULK_CHECK_RADIUS; z++) {
+                    cursor.set(origin.getX() + x, origin.getY() + y, origin.getZ() + z);
+                    if (SculkMob.isSculkBlock(level.getBlockState(cursor))) return true;
+                }
+            }
+        }
+        return false;
+    }
+}
