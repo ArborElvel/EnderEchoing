@@ -7,6 +7,6 @@ import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
 public class SculkSpreaderEntityRenderer  extends GeoEntityRenderer<SculkSpreaderEntity> {
     public SculkSpreaderEntityRenderer(EntityRendererProvider.Context c) {
-        super(c, new SculkSpreaderEntityModel());
+        super(c, new SculkSpreaderEntityModel<>());
     }
 }

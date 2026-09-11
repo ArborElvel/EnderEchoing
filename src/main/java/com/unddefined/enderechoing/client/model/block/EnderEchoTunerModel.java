@@ -7,23 +7,17 @@ import software.bernie.geckolib.model.DefaultedBlockGeoModel;
 
 import static com.unddefined.enderechoing.blocks.EnderEchoTunerBlock.CHARGED;
 
-public class EnderEchoTunerModel extends DefaultedBlockGeoModel<EnderEchoTunerBlockEntity> {
-    private final ResourceLocation R = ResourceLocation.fromNamespaceAndPath("enderechoing", "calibrated_sculk_shrieker");
+public class EnderEchoTunerModel<T extends EnderEchoTunerBlockEntity> extends DefaultedBlockGeoModel<T> {
+    private static final ResourceLocation ASSET = ResourceLocation.fromNamespaceAndPath("enderechoing", "calibrated_sculk_shrieker");
 
-    public EnderEchoTunerModel() {super(ResourceLocation.fromNamespaceAndPath("enderechoing", "ender_echo_tuner"));}
-
-    @Override
-    public ResourceLocation getModelResource(EnderEchoTunerBlockEntity animatable) {return buildFormattedModelPath(R);}
+    public EnderEchoTunerModel() {super(ASSET);}
 
     @Override
-    public ResourceLocation getTextureResource(EnderEchoTunerBlockEntity animatable) {
-        return animatable.getBlockState().getValue(CHARGED) ? buildFormattedTexturePath(R.withSuffix("_charged"))
-                : buildFormattedTexturePath(R);
+    public ResourceLocation getTextureResource(T animatable) {
+        return buildFormattedTexturePath(animatable.getBlockState().getValue(CHARGED) ? ASSET.withSuffix("_charged")
+                : ASSET);
     }
 
     @Override
-    public ResourceLocation getAnimationResource(EnderEchoTunerBlockEntity animatable) {return buildFormattedAnimationPath(R);}
-
-    @Override
-    public RenderType getRenderType(EnderEchoTunerBlockEntity animatable, ResourceLocation texture) {return RenderType.entityTranslucent(texture);}
+    public RenderType getRenderType(T animatable, ResourceLocation texture) {return RenderType.entityTranslucent(texture);}
 }

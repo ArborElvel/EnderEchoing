@@ -17,7 +17,7 @@ import software.bernie.geckolib.renderer.GeoItemRenderer;
 public class WarpCoreRenderer extends GeoItemRenderer<WarpCore> {
 
     public WarpCoreRenderer(GeoModel<WarpCore> model) {
-        super(new WarpCoreModel());
+        super(new WarpCoreModel<>());
     }
 
     @Override

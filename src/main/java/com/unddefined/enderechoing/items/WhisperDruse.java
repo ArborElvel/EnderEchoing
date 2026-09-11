@@ -25,7 +25,7 @@ public class WhisperDruse extends Item implements GeoItem {
 
             @Override
             public BlockEntityWithoutLevelRenderer getGeoItemRenderer() {
-                if (this.renderer == null) this.renderer = new WhisperDruseRenderer(new WhisperDruseModel());
+                if (this.renderer == null) this.renderer = new WhisperDruseRenderer(new WhisperDruseModel<>());
                 return this.renderer;
             }
         });

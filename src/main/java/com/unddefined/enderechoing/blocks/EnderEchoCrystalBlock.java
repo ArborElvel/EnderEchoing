@@ -51,6 +51,7 @@ import java.util.Map;
 import static com.unddefined.enderechoing.Config.EECrystal_TP_DISTANCE;
 import static com.unddefined.enderechoing.EnderEchoing.GZERO;
 import static com.unddefined.enderechoing.server.registry.DataRegistry.EE_PEARL_AMOUNT;
+import static com.unddefined.enderechoing.server.registry.ItemRegistry.ENDER_ECHOING_CORE;
 import static net.minecraft.core.component.DataComponents.CUSTOM_NAME;
 import static net.minecraft.world.item.Items.AMETHYST_SHARD;
 import static net.minecraft.world.item.Items.ECHO_SHARD;
@@ -149,6 +150,7 @@ public class EnderEchoCrystalBlock extends Block implements EntityBlock {
         //定向即时传送
         if (tuner instanceof EnderEchoTunerBlockEntity B && B.getSelectedPos() != null && !B.getSelectedPos().equals(GZERO)
                 && player.getData(EE_PEARL_AMOUNT) > 0
+                && player.getUseItem().is(ENDER_ECHOING_CORE)
                 && B.getSelectedPos().dimension().equals(level.dimension())
                 && Math.sqrt(B.getSelectedPos().pos().distSqr(pos)) <= D * D * 0.05){
             var Pos = B.getSelectedPos().pos().getCenter();

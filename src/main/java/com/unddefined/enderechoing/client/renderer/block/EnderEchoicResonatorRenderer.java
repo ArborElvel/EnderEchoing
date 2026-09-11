@@ -13,7 +13,7 @@ import software.bernie.geckolib.renderer.GeoBlockRenderer;
 
 public class EnderEchoicResonatorRenderer extends GeoBlockRenderer<EnderEchoicResonatorBlockEntity> {
     public EnderEchoicResonatorRenderer() {
-        super(new EnderEchoicResonatorModel());
+        super(new EnderEchoicResonatorModel<>());
         this.addRenderLayer(new EnderEchoicResonatorLayer(this));
     }
     @Override

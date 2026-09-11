@@ -5,19 +5,11 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.model.DefaultedBlockGeoModel;
 
-public class EnderEchoCrystalBlockModel extends DefaultedBlockGeoModel<EnderEchoCrystalBlockEntity> {
-    private final ResourceLocation E = ResourceLocation.fromNamespaceAndPath("enderechoing", "ender_echo_crystal_block");
-    private final ResourceLocation R = ResourceLocation.fromNamespaceAndPath("enderechoing", "calibrated_sculk_shrieker");
-    public EnderEchoCrystalBlockModel() {super(ResourceLocation.fromNamespaceAndPath("enderechoing", "ender_echo_crystal_block"));}
-    @Override
-    public ResourceLocation getModelResource(EnderEchoCrystalBlockEntity animatable) {return buildFormattedModelPath(R);}
+public class EnderEchoCrystalBlockModel<T extends EnderEchoCrystalBlockEntity> extends DefaultedBlockGeoModel<T> {
+    public EnderEchoCrystalBlockModel() {
+        super(ResourceLocation.fromNamespaceAndPath("enderechoing", "calibrated_sculk_shrieker"));
+    }
 
     @Override
-    public ResourceLocation getTextureResource(EnderEchoCrystalBlockEntity animatable) {return buildFormattedTexturePath(R);}
-
-    @Override
-    public ResourceLocation getAnimationResource(EnderEchoCrystalBlockEntity animatable) {return buildFormattedAnimationPath(R);}
-
-    @Override
-    public RenderType getRenderType(EnderEchoCrystalBlockEntity animatable, ResourceLocation texture) {return RenderType.entityTranslucent(texture);}
+    public RenderType getRenderType(T animatable, ResourceLocation texture) {return RenderType.entityTranslucent(texture);}
 }

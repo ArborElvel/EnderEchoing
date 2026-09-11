@@ -12,7 +12,7 @@ import software.bernie.geckolib.renderer.GeoBlockRenderer;
 
 public class CalibratedSculkShriekerRenderer extends GeoBlockRenderer<CalibratedSculkShriekerBlockEntity> {
     public CalibratedSculkShriekerRenderer() {
-        super(new CalibratedSculkShriekerModel());
+        super(new CalibratedSculkShriekerModel<>());
         // 添加渲染层以渲染物品
         addRenderLayer(new CalibratedSculkShriekerLayer(this));
     }

@@ -25,7 +25,7 @@ import static net.minecraft.client.renderer.LightTexture.FULL_BLOCK;
 public class EnderEchoTunerRenderer extends GeoBlockRenderer<EnderEchoTunerBlockEntity> {
     private static final Minecraft mc = Minecraft.getInstance();
     public EnderEchoTunerRenderer() {
-        super(new EnderEchoTunerModel());
+        super(new EnderEchoTunerModel<>());
         addRenderLayer(new EnderEchoTunerLayer(this));
     }
 

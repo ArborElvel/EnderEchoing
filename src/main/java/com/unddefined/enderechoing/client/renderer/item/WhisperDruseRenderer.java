@@ -14,7 +14,7 @@ import software.bernie.geckolib.renderer.GeoItemRenderer;
 
 public class WhisperDruseRenderer extends GeoItemRenderer<WhisperDruse> {
     public WhisperDruseRenderer(GeoModel<WhisperDruse> M) {
-        super(new WhisperDruseModel());
+        super(new WhisperDruseModel<>());
     }
     private final ResourceLocation whisper = ResourceLocation.fromNamespaceAndPath("enderechoing","textures/misc/whisper.png");
 

@@ -19,7 +19,7 @@ import static net.minecraft.client.renderer.LightTexture.FULL_BLOCK;
 
 public class EnderEchoingCoreRenderer extends GeoItemRenderer<EnderEchoingCore> {
     public EnderEchoingCoreRenderer(GeoModel<EnderEchoingCore> model) {
-        super(new EnderEchoingCoreModel());
+        super(new EnderEchoingCoreModel<>());
     }
     private final ResourceLocation Core_layer = ResourceLocation.fromNamespaceAndPath("enderechoing", "textures/misc/core_layer.png");
     @Override

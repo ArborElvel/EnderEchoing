@@ -4,27 +4,8 @@ import com.unddefined.enderechoing.blocks.entity.CalibratedSculkShriekerBlockEnt
 import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.model.DefaultedBlockGeoModel;
 
-public class CalibratedSculkShriekerModel extends DefaultedBlockGeoModel<CalibratedSculkShriekerBlockEntity> {
-    private final ResourceLocation modelPath = buildFormattedModelPath(ResourceLocation.fromNamespaceAndPath("enderechoing", "calibrated_sculk_shrieker"));
-    private final ResourceLocation texturePath = buildFormattedTexturePath(ResourceLocation.fromNamespaceAndPath("enderechoing", "calibrated_sculk_shrieker"));
-    private final ResourceLocation animationPath = buildFormattedAnimationPath(ResourceLocation.fromNamespaceAndPath("enderechoing", "calibrated_sculk_shrieker"));
-
+public class CalibratedSculkShriekerModel<T extends CalibratedSculkShriekerBlockEntity> extends DefaultedBlockGeoModel<T> {
     public CalibratedSculkShriekerModel() {
         super(ResourceLocation.fromNamespaceAndPath("enderechoing", "calibrated_sculk_shrieker"));
-    }
-
-    @Override
-    public ResourceLocation getAnimationResource(CalibratedSculkShriekerBlockEntity animatable) {
-        return animationPath;
-    }
-
-    @Override
-    public ResourceLocation getModelResource(CalibratedSculkShriekerBlockEntity animatable) {
-        return modelPath;
-    }
-
-    @Override
-    public ResourceLocation getTextureResource(CalibratedSculkShriekerBlockEntity animatable) {
-        return texturePath;
     }
 }

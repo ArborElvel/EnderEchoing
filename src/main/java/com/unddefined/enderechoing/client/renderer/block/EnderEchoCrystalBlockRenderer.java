@@ -35,7 +35,7 @@ public class EnderEchoCrystalBlockRenderer extends GeoBlockRenderer<EnderEchoCry
             FastColor.ABGR32.color(255, 170, 0, 170),
             FastColor.ABGR32.color(255, 0, 170, 170)
     };
-    public EnderEchoCrystalBlockRenderer() {super(new EnderEchoCrystalBlockModel());}
+    public EnderEchoCrystalBlockRenderer() {super(new EnderEchoCrystalBlockModel<>());}
 
     @Override
     public void actuallyRender(PoseStack poseStack, EnderEchoCrystalBlockEntity animatable, BakedGeoModel model, @Nullable RenderType renderType,

@@ -6,6 +6,6 @@ import software.bernie.geckolib.renderer.GeoBlockRenderer;
 
 public class SculkWhisperRenderer extends GeoBlockRenderer<SculkWhisperBlockEntity> {
     public SculkWhisperRenderer() {
-        super(new SculkWhisperModel());
+        super(new SculkWhisperModel<>());
     }
 }

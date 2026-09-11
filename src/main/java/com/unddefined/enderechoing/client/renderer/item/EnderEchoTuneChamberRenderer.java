@@ -13,7 +13,7 @@ import software.bernie.geckolib.renderer.layer.AutoGlowingGeoLayer;
 
 public class EnderEchoTuneChamberRenderer extends GeoItemRenderer<EnderEchoTuneChamber> {
     public EnderEchoTuneChamberRenderer() {
-        super(new EnderEchoTuneChamberModel());
+        super(new EnderEchoTuneChamberModel<>());
         addRenderLayer(new AutoGlowingGeoLayer<>(this));
     }
     private final ResourceLocation Core_layer = ResourceLocation.fromNamespaceAndPath("enderechoing", "textures/misc/core_layer.png");

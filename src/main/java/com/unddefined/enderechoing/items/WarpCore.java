@@ -204,7 +204,7 @@ public class WarpCore extends Item implements GeoItem {
 
             @Override
             public BlockEntityWithoutLevelRenderer getGeoItemRenderer() {
-                if (this.renderer == null) this.renderer = new WarpCoreRenderer(new WarpCoreModel());
+                if (this.renderer == null) this.renderer = new WarpCoreRenderer(new WarpCoreModel<>());
                 return this.renderer;
             }
         });

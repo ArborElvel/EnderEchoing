@@ -80,7 +80,7 @@ public class EnderEchoingCore extends Item implements GeoItem {
 
             @Override
             public BlockEntityWithoutLevelRenderer getGeoItemRenderer() {
-                if (this.renderer == null) this.renderer = new EnderEchoingCoreRenderer(new EnderEchoingCoreModel());
+                if (this.renderer == null) this.renderer = new EnderEchoingCoreRenderer(new EnderEchoingCoreModel<>());
                 return this.renderer;
             }
         });

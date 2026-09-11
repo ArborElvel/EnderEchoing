@@ -12,7 +12,7 @@ import software.bernie.geckolib.renderer.GeoItemRenderer;
 
 public class EnderEchoCrystalRenderer extends GeoItemRenderer<EnderEchoCrystal> {
     public EnderEchoCrystalRenderer() {
-        super(new EnderEchoCrystalModel());
+        super(new EnderEchoCrystalModel<>());
     }
     private final ResourceLocation Core_layer = ResourceLocation.fromNamespaceAndPath("enderechoing", "textures/misc/core_layer.png");
     @Override
