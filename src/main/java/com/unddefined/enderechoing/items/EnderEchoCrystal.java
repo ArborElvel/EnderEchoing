@@ -17,7 +17,7 @@ public class EnderEchoCrystal extends Item implements GeoItem {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     public EnderEchoCrystal(Properties properties) {
-        super(properties.stacksTo(4).rarity(Rarity.UNCOMMON));
+        super(properties.stacksTo(4).rarity(Rarity.RARE));
     }
 
     @Override

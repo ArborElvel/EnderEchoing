@@ -1,6 +1,7 @@
 package com.unddefined.enderechoing.effects;
 
 import com.unddefined.enderechoing.entities.SculkMob;
+import com.unddefined.enderechoing.server.registry.DataRegistry;
 import com.unddefined.enderechoing.server.registry.MobEffectRegistry;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.effect.MobEffect;
@@ -17,8 +18,8 @@ import static com.unddefined.enderechoing.Config.SCULK_VEIL_DARKNESS_DURATION;
 import static com.unddefined.enderechoing.server.registry.MobEffectRegistry.SCULK_INTRUSION;
 
 public class SculkVeilEffect extends MobEffect {
-    /** 随机 debuff 的刷新周期：60 tick = 3 秒 */
     private static final int DEBUFF_INTERVAL = 60;
+    private static final long FIVE_MINUTES = 6000;
 
     public SculkVeilEffect() {
         super(MobEffectCategory.BENEFICIAL, 0x4215441);
@@ -26,6 +27,19 @@ public class SculkVeilEffect extends MobEffect {
 
     @Override
     public void onEffectAdded(LivingEntity livingEntity, int pAmplifier) {
+        if (livingEntity.level() instanceof ServerLevel level) {
+            long now = level.getGameTime();
+            long start = livingEntity.getData(DataRegistry.SCULK_VEIL_START);
+            long lastTick = livingEntity.getData(DataRegistry.SCULK_VEIL_LAST_TICK);
+            long total = livingEntity.getData(DataRegistry.SCULK_VEIL_TOTAL);
+            if (start >= 0) {
+                total += Math.max(0, lastTick - start + 1);
+                livingEntity.setData(DataRegistry.SCULK_VEIL_TOTAL, total);
+            }
+            livingEntity.setData(DataRegistry.SCULK_VEIL_START, now);
+            livingEntity.setData(DataRegistry.SCULK_VEIL_LAST_TICK, now);
+            if (total >= FIVE_MINUTES) applyPermanentDarkness(livingEntity);
+        }
         // 检查实体是否发光，如果发光则不应用影匿效果
         if (livingEntity.isCurrentlyGlowing()) {
             // 直接移除刚刚添加的效果
@@ -54,6 +68,16 @@ public class SculkVeilEffect extends MobEffect {
 //        entity.setInvisible(true);
         // 用该实体自己的效果剩余时长驱动脉冲，不在单例 effect 上保存跨实体状态
         if (entity.level() instanceof ServerLevel) {
+            long now = entity.level().getGameTime();
+            entity.setData(DataRegistry.SCULK_VEIL_LAST_TICK, now);
+            long start = entity.getData(DataRegistry.SCULK_VEIL_START);
+            long glowingTotal = entity.getData(DataRegistry.GLOWING_TOTAL);
+            long glowingStart = entity.getData(DataRegistry.GLOWING_START);
+            if (glowingStart >= 0) glowingTotal += now - glowingStart + 1;
+            if (start >= 0 && entity.getData(DataRegistry.SCULK_VEIL_TOTAL) + now - start + 1 - glowingTotal >= FIVE_MINUTES) {
+                entity.setData(DataRegistry.SCULK_VEIL_TOTAL, FIVE_MINUTES);
+                applyPermanentDarkness(entity);
+            }
             MobEffectInstance veil = entity.getEffect(MobEffectRegistry.SCULK_VEIL);
             if (veil != null && veil.getDuration() > 0 && veil.getDuration() % DEBUFF_INTERVAL == 0)
                 applyDebuffPulse(entity, veil.getDuration());
@@ -62,6 +86,10 @@ public class SculkVeilEffect extends MobEffect {
         return !entity.isCurrentlyGlowing();
         //TODO: 半透明
 
+    }
+
+    private static void applyPermanentDarkness(LivingEntity entity) {
+        entity.addEffect(new MobEffectInstance(MobEffects.DARKNESS, Integer.MAX_VALUE, 1, false, true));
     }
 
     /** 随机施加两个负面效果与黑暗效果，持续时间与影匿剩余时长一致 */

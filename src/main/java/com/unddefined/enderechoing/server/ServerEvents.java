@@ -51,6 +51,7 @@ import static com.unddefined.enderechoing.effects.TinnitusEffect.tinnitus_modifi
 import static com.unddefined.enderechoing.server.registry.BlockRegistry.ENDER_ECHOIC_RESONATOR;
 import static com.unddefined.enderechoing.server.registry.DataRegistry.*;
 import static com.unddefined.enderechoing.server.registry.MobEffectRegistry.*;
+import static net.minecraft.world.effect.MobEffects.DARKNESS;
 import static net.minecraft.world.effect.MobEffects.GLOWING;
 import static net.minecraft.world.entity.ai.attributes.Attributes.*;
 
@@ -159,8 +160,28 @@ public class ServerEvents {
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        long now = player.level().getGameTime();
+        updateGlowingTime(player, now);
+        long glowingInProgress = player.getData(GLOWING_START) >= 0 ? now - player.getData(GLOWING_START) + 1 : 0;
+        if (player.getData(SCULK_VEIL_TOTAL) - player.getData(GLOWING_TOTAL) - glowingInProgress >= 6000
+                && !player.hasEffect(DARKNESS))
+            player.addEffect(new MobEffectInstance(DARKNESS, Integer.MAX_VALUE, 1, false, true));
         if (player.tickCount % 20 != 0) return;
         EnderEchoingEyeLocator.markVisitedIfInside(player);
+    }
+
+    private static void updateGlowingTime(ServerPlayer player, long now) {
+        long start = player.getData(GLOWING_START);
+        if (player.hasEffect(GLOWING)) {
+            if (start < 0) player.setData(GLOWING_START, now);
+
+            player.setData(GLOWING_LAST_TICK, now);
+        } else if (start >= 0) {
+            long lastTick = player.getData(GLOWING_LAST_TICK);
+            player.setData(GLOWING_TOTAL, player.getData(GLOWING_TOTAL) + Math.max(0, lastTick - start + 1));
+            player.setData(GLOWING_START, -1L);
+            player.setData(GLOWING_LAST_TICK, -1L);
+        }
     }
 
     @SubscribeEvent
