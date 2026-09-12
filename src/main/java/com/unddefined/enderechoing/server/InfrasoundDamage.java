@@ -1,16 +1,19 @@
 package com.unddefined.enderechoing.server;
 
+import com.unddefined.enderechoing.entities.SculkMob;
 import com.unddefined.enderechoing.network.packet.InfrasoundParticlePacket;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Unit;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.monster.warden.Warden;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -70,7 +73,12 @@ public class InfrasoundDamage extends DamageSource {
                 entity.hurt(damageSource, damage);
                 if (entity instanceof Player player)
                     player.getWardenSpawnTracker().ifPresent(t -> t.setWarningLevel(t.getWarningLevel() - 1));
-                if (entity instanceof Warden W) W.hurt(damageSource, W.getHealth() * damage / 120f);
+                if (entity instanceof Warden W) {
+                    W.hurt(damageSource, W.getHealth() * damage / 120f);
+                    // 被次声波击中的监守者有几率逃跑
+                    if (W.getRandom().nextFloat() >= 0.3)
+                        W.getBrain().setMemoryWithExpiry(MemoryModuleType.DIG_COOLDOWN, Unit.INSTANCE, 0);
+                }
             }
 
             // 对在affect_range范围内的生物应用debuff效果
@@ -85,7 +93,10 @@ public class InfrasoundDamage extends DamageSource {
                     entity.addEffect(new MobEffectInstance(STAGGER, duration * 20, 1));
                     entity.addEffect(new MobEffectInstance(TINNITUS, duration * 20, 1));
                     entity.addEffect(new MobEffectInstance(CONFUSION, duration * 20, 1));
-                   if(level.getRandom().nextInt(3) == 0) entity.addEffect(new MobEffectInstance(SCULK_INTRUSION, duration * 20, 1));
+                    if (level.getRandom().nextInt(3) == 0) entity.addEffect(new MobEffectInstance(SCULK_INTRUSION, duration * 20, 1));
+
+                    // 幽匿单位额外被次声波压制：缓慢 IV 与虚弱 IV 各 10 秒
+                    if (entity instanceof SculkMob sculkMob) sculkMob.applyInfrasoundDebuffs();
                 }
             }
 

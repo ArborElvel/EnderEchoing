@@ -19,7 +19,7 @@ public class SculkIntrusionEffect extends MobEffect {
     public void onEffectAdded(LivingEntity entity, int pAmplifier) {
         var effect = entity.getEffect(MobEffectRegistry.SCULK_INTRUSION);
         if (effect != null && effect.getDuration() > 0)
-            entity.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, effect.getDuration() / 2));
+            entity.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, effect.getDuration() / 3));
     }
     @Override
     public boolean applyEffectTick(LivingEntity entity, int pAmplifier) {

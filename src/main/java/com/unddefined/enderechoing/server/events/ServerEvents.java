@@ -169,13 +169,25 @@ public class ServerEvents {
     }
 
     /**
-     * 监守者常驻携带侵扰 spreader：没有侵扰效果时也每 tick 驱动
+     * 幽匿生物击中目标后有几率为目标赋予侵扰效果（近战与算作该生物造成的伤害都包含在内）
+     */
+    @SubscribeEvent
+    public static void onSculkMobAttack(LivingIncomingDamageEvent event) {
+        if (!(event.getSource().getEntity() instanceof SculkMob sculkMob)) return;
+        if (!(event.getEntity().level() instanceof ServerLevel)) return;
+        sculkMob.tryApplyIntrusionOnAttack(event.getEntity());
+    }
+
+    /**
+     * 监守者每 tick 的驱动：常驻的侵扰 spreader 在没有侵扰效果时也每 tick 驱动
      */
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
         if (!(event.getEntity() instanceof Warden warden)) return;
         if (!(warden.level() instanceof ServerLevel level)) return;
-        if (!warden.isAlive() || warden.hasEffect(SCULK_INTRUSION)) return;
+        if (!warden.isAlive()) return;
+
+        if (warden.hasEffect(SCULK_INTRUSION)) return;
         warden.getData(SCULK_SPREADER).serverTick(level, warden);
     }
 

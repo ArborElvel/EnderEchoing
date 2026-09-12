@@ -34,6 +34,8 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import static com.unddefined.enderechoing.server.registry.MobEffectRegistry.SCULK_INTRUSION;
+
 /**
  * 幽匿生物（Sculk Mob）的共用约定，实现该接口的生物需要满足以下规则：
  *
@@ -47,6 +49,8 @@ import java.util.Map;
  *     <li>在幽匿系方块上会缓慢回血，回血速度与亮度成反比。</li>
  *     <li>均不会发出振动，幽匿感测体与监守者等无法感知到它们，见 {@link net.minecraft.world.entity.Entity#dampensVibrations()}。</li>
  *     <li>影匿的不可选中对他们无效。</li>
+ *     <li>受到次声波影响时获得缓慢 IV 与虚弱 IV，见 {@link #applyInfrasoundDebuffs()}。</li>
+ *     <li>攻击生物时有一定几率使被攻击者获得幽匿侵扰，见 {@link #tryApplyIntrusionOnAttack(LivingEntity)}。</li>
  *     <li>会掉落基础掉落物 echo_shard（5%）与 sculk_matter（45%），抢夺附魔默认只影响掉落率不影响数量；
  *         基础掉落的概率、数量以及抢夺是否影响数量都在 {@link #sculkBaseLoot()} 里配置，
  *         子类可覆盖该方法追加自己的掉落物。</li>
@@ -85,6 +89,18 @@ public interface SculkMob {
 
     /** 站在幽匿系方块上时，移动速度与生命上限临时提高的比例（10%）。 */
     float SCULK_BLOCK_BONUS = 0.10F;
+
+    /** 受到次声波影响时，幽匿单位获得的缓慢与虚弱的等级（IV 级对应 amplifier 3）。 */
+    int INFRASOUND_DEBUFF_AMPLIFIER = 3;
+
+    /** 受到次声波影响时，幽匿单位获得的缓慢与虚弱的持续时间，单位为游戏刻（tick）。 */
+    int INFRASOUND_DEBUFF_DURATION = 160;
+
+    /** 攻击生物时，使被攻击者获得幽匿侵扰的概率。 */
+    float INTRUSION_ON_ATTACK_CHANCE = 0.1F;
+
+    /** 攻击赋予的幽匿侵扰的持续时间，单位为游戏刻（tick）。 */
+    int INTRUSION_ON_ATTACK_DURATION = 20 * 60;
 
     /** 幽匿系方块移动速度加成的修正器 id。 */
     ResourceLocation SCULK_BLOCK_SPEED_MODIFIER =
@@ -286,6 +302,40 @@ public interface SculkMob {
 
         var looting = level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.LOOTING);
         return EnchantmentHelper.getEnchantmentLevel(looting, living);
+    }
+
+    /**
+     * 次声波对幽匿单位的压制：获得 {@link MobEffects#MOVEMENT_SLOWDOWN 缓慢 IV} 与
+     * {@link MobEffects#WEAKNESS 虚弱 IV} 各 {@value #INFRASOUND_DEBUFF_DURATION} 刻，
+     * 对应设计文档里「使其它幽匿单位短暂失活」这条规则。
+     *
+     * <p>由 {@link com.unddefined.enderechoing.server.InfrasoundDamage#InfrasoundBurst} 在结算次声波减益时
+     * 对范围内的幽匿单位调用。范围判定与回响碎片、龙韵碎片的免疫判定都在调用方，这里只负责施加效果。
+     */
+    default void applyInfrasoundDebuffs() {
+        LivingEntity self = (LivingEntity) this;
+        self.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, INFRASOUND_DEBUFF_DURATION, INFRASOUND_DEBUFF_AMPLIFIER));
+        self.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, INFRASOUND_DEBUFF_DURATION, INFRASOUND_DEBUFF_AMPLIFIER));
+    }
+
+    /**
+     * 攻击生物时的侵扰：按 {@value #INTRUSION_ON_ATTACK_CHANCE} 的概率使被攻击者获得
+     * {@link com.unddefined.enderechoing.server.registry.MobEffectRegistry#SCULK_INTRUSION 幽匿侵扰}，
+     * 持续 {@value #INTRUSION_ON_ATTACK_DURATION} 刻。
+     *
+     * <p>由 {@code ServerEvents} 在 {@code LivingIncomingDamageEvent} 里对伤害来源为本类生物的伤害调用，
+     * 因此近战与被算作该生物造成的伤害（例如幽匿爬行者的次声波）都会走同一条规则。
+     * 攻击者自身、对目标是否已有效果的判定都不在这里处理，重复命中相当于刷新持续时间。
+     *
+     * @param target 被该生物攻击的生物
+     */
+    default void tryApplyIntrusionOnAttack(LivingEntity target) {
+        LivingEntity self = (LivingEntity) this;
+        if (self.level().isClientSide) return;
+
+        if (self.getRandom().nextFloat() >= INTRUSION_ON_ATTACK_CHANCE) return;
+
+        target.addEffect(new MobEffectInstance(SCULK_INTRUSION, INTRUSION_ON_ATTACK_DURATION));
     }
 
     /**
