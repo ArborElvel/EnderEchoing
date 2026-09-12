@@ -1,10 +1,13 @@
-package com.unddefined.enderechoing.server;
+package com.unddefined.enderechoing.server.events;
 
 import com.unddefined.enderechoing.EnderEchoing;
 import com.unddefined.enderechoing.blocks.EnderEchoCrystalBlock;
 import com.unddefined.enderechoing.entities.SculkMob;
 import com.unddefined.enderechoing.server.DataComponents.EnderEchoCrystalSavedData;
 import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
+import com.unddefined.enderechoing.server.EnderEchoingEyeLocator;
+import com.unddefined.enderechoing.server.SculkBloom;
+import com.unddefined.enderechoing.server.SculkIntrusionSpreader;
 import com.unddefined.enderechoing.server.registry.ItemRegistry;
 import com.unddefined.enderechoing.server.registry.PotionRegistry;
 import net.minecraft.network.chat.Component;

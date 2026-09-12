@@ -4,8 +4,10 @@ import com.unddefined.enderechoing.client.model.cem.SculkZombieCemAnimator;
 import com.unddefined.enderechoing.entities.SculkZombieEntity;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animation.AnimationState;
 import software.bernie.geckolib.model.DefaultedEntityGeoModel;
+import software.bernie.geckolib.renderer.GeoRenderer;
 
 public class SculkZombieEntityModel<T extends SculkZombieEntity> extends DefaultedEntityGeoModel<T> {
     private final SculkZombieCemAnimator cemAnimator = new SculkZombieCemAnimator(this);
@@ -16,6 +18,12 @@ public class SculkZombieEntityModel<T extends SculkZombieEntity> extends Default
 
     @Override
     public RenderType getRenderType(T animatable, ResourceLocation texture) {return RenderType.entityTranslucent(texture);}
+
+    @Override
+    public ResourceLocation getTextureResource(T animatable, @Nullable GeoRenderer<T> renderer) {
+        return buildFormattedTexturePath(ResourceLocation.fromNamespaceAndPath("enderechoing",
+                "sculk_zombie" + (animatable.isVibrationActive() ? "_active" : "")));
+    }
 
     @Override
     public void setCustomAnimations(T animatable, long instanceId, AnimationState<T> animationState) {

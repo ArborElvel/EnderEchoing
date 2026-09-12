@@ -1,4 +1,4 @@
-package com.unddefined.enderechoing.server;
+package com.unddefined.enderechoing.server.events;
 
 import com.unddefined.enderechoing.EnderEchoing;
 import com.unddefined.enderechoing.server.registry.EntityRegistry;

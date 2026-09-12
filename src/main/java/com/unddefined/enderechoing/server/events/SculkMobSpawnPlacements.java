@@ -1,7 +1,6 @@
 package com.unddefined.enderechoing.server.events;
 
 import com.unddefined.enderechoing.entities.SculkMob;
-import com.unddefined.enderechoing.server.ShadowNight;
 import com.unddefined.enderechoing.server.registry.EntityRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
@@ -33,16 +32,16 @@ import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent;
 public class SculkMobSpawnPlacements {
 
     /** 附近没有幽匿系方块时的生成概率。 */
-    public static final float SPAWN_CHANCE = 0.2F;
+    public static final float SPAWN_CHANCE = 0.15F;
 
     /** 附近有幽匿系方块时的生成概率。 */
-    public static final float SPAWN_CHANCE_NEAR_SCULK = 0.8F;
+    public static final float SPAWN_CHANCE_NEAR_SCULK = 0.5F;
 
     /** 深暗之域的概率倍率：原版这里不刷任何生物，折中保留但明显压低。 */
     public static final float DEEP_DARK_CHANCE_FACTOR = 0.1F;
 
     /** 幽影之夜提高幽匿生物自然生成判定的倍率。 */
-    public static final float SHADOW_NIGHT_CHANCE_FACTOR = 7.0F;
+    public static final float SHADOW_NIGHT_CHANCE_FACTOR = 3.0F;
 
     /** 检测幽匿系方块的水平半径（方块数），竖直方向取脚下一格到头上一格。 */
     private static final int SCULK_CHECK_RADIUS = 2;

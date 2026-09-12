@@ -11,7 +11,8 @@
     "FogDataAccessor",
     "MixinPlayerRenderer",
     "SculkBlockMixin",
-    "SculkPatchFeatureMixin"
+    "SculkPatchFeatureMixin",
+    "WardenMixin"
   ],
   "client": [
     "EndCrystalRendererMixin",

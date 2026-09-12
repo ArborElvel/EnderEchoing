@@ -8,7 +8,7 @@ import com.unddefined.enderechoing.client.particles.EchoResponding;
 import com.unddefined.enderechoing.client.particles.EchoResponse;
 import com.unddefined.enderechoing.client.particles.EchoSounding;
 import com.unddefined.enderechoing.network.packet.TeleportRequestPacket;
-import com.unddefined.enderechoing.server.ShadowNight;
+import com.unddefined.enderechoing.server.events.ShadowNight;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.core.BlockPos;
