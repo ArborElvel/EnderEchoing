@@ -51,6 +51,7 @@ import java.util.Map;
  *         基础掉落的概率、数量以及抢夺是否影响数量都在 {@link #sculkBaseLoot()} 里配置，
  *         子类可覆盖该方法追加自己的掉落物。</li>
  *     <li>不包括 {@link net.minecraft.world.entity.monster.warden.Warden}。</li>
+ *     <li>Warden 不会以他们为目标。</li>
  * </ol>
  *
  * <p>以上规则中的“幽匿系方块”指方块标签 {@link TagRegistry#SCULK_BLOCKS}，

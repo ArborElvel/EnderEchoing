@@ -30,6 +30,9 @@ public class SculkZombieTendrilLayer extends FastBoneFilterGeoLayer<SculkZombieE
     /** 原版幽匿感测体（未激活）的触须贴图。 */
     public static final ResourceLocation TENDRIL_TEXTURE =
             ResourceLocation.withDefaultNamespace("textures/block/sculk_sensor_tendril_inactive.png");
+    /** 原版幽匿感测体（激活中）的触须贴图。 */
+    public static final ResourceLocation ACTIVE_TENDRIL_TEXTURE =
+            ResourceLocation.withDefaultNamespace("textures/block/sculk_sensor_tendril_active.png");
 
     /** geo.json 中使用原版触须贴图的骨骼名，同时是过滤与绘制的唯一依据。 */
     private static final List<String> TENDRIL_BONES = List.of("tendril");
@@ -50,10 +53,12 @@ public class SculkZombieTendrilLayer extends FastBoneFilterGeoLayer<SculkZombieE
         if (!TENDRIL_BONES.contains(bone.getName())) return;
 
         // 原版触须靠 mcmeta 播放动画，交给 GeckoLib 的 AnimatableTexture 按当前时间推帧
-        AnimatableTexture.setAndUpdate(TENDRIL_TEXTURE);
+        ResourceLocation tendrilTexture = animatable.isVibrationActive()
+                ? ACTIVE_TENDRIL_TEXTURE : TENDRIL_TEXTURE;
+        AnimatableTexture.setAndUpdate(tendrilTexture);
 
         // 这根骨骼在主贴图那一遍被藏起来了，这里把它自己的方块画进原版贴图的缓冲区
-        VertexConsumer tendrilBuffer = bufferSource.getBuffer(RenderType.entityCutout(TENDRIL_TEXTURE));
+        VertexConsumer tendrilBuffer = bufferSource.getBuffer(RenderType.entityCutout(tendrilTexture));
         int colour = getRenderer().getRenderColor(animatable, partialTick, packedLight).argbInt();
 
         for (GeoCube cube : bone.getCubes()) {
