@@ -18,9 +18,9 @@ import java.util.ArrayList;
 @EventBusSubscriber(modid = EnderEchoing.MODID)
 public final class ShadowNight {
     /** 幽影之夜中幻翼的生成权重；修改此值即可调整相对其它怪物的权重。 */
-    public static final int PHANTOM_SPAWN_WEIGHT = 80;
+    public static final int PHANTOM_SPAWN_WEIGHT = 200;
     /** 幽影之夜其它怪物的权重倍率；0.25 表示降为原来的四分之一。 */
-    public static final float OTHER_MOB_WEIGHT_FACTOR = 0.50F;
+    public static final float OTHER_MOB_WEIGHT_FACTOR = 0.85F;
 
     private ShadowNight() {}
 

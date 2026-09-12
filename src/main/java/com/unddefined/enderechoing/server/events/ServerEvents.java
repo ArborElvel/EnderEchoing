@@ -2,6 +2,7 @@ package com.unddefined.enderechoing.server.events;
 
 import com.unddefined.enderechoing.EnderEchoing;
 import com.unddefined.enderechoing.blocks.EnderEchoCrystalBlock;
+import com.unddefined.enderechoing.entities.SculkCreeperEntity;
 import com.unddefined.enderechoing.entities.SculkMob;
 import com.unddefined.enderechoing.server.DataComponents.EnderEchoCrystalSavedData;
 import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
@@ -43,6 +44,7 @@ import net.neoforged.neoforge.event.entity.living.*;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.BlockDropsEvent;
+import net.neoforged.neoforge.event.level.ExplosionEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
@@ -116,6 +118,14 @@ public class ServerEvents {
         // 与原版一样遵守 doMobLoot 规则
         if (!level.getGameRules().getBoolean(GameRules.RULE_DOMOBLOOT)) return;
         sculkMob.dropSculkMobLoot(level, event.getSource(), event.getDrops());
+    }
+
+    /** 幽匿爬行者自爆时不做物理爆炸，改为发出次声波 */
+    @SubscribeEvent
+    public static void onSculkCreeperExplosion(ExplosionEvent.Start event) {
+        if (!(event.getExplosion().getDirectSourceEntity() instanceof SculkCreeperEntity creeper)) return;
+        if (event.getLevel() instanceof ServerLevel level) creeper.infrasoundExplode(level);
+        event.setCanceled(true);
     }
 
     /** 破坏幽匿系方块时按概率掉落一个幽匿物质，概率受时运影响。 */

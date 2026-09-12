@@ -32,9 +32,24 @@ public class InfrasoundDamage extends DamageSource {
     }
 
     public static void InfrasoundBurst(ServerLevel level, Vec3 center, float hurt_range, float affect_range, int damage, Entity causingEntity) {
+        InfrasoundBurst(level, center, hurt_range, affect_range, damage, causingEntity, null);
+    }
+
+    /**
+     * 与 {@link #InfrasoundBurst(ServerLevel, Vec3, float, float, int, Entity)} 相同，
+     * 但额外把 {@code excluded} 排除在结算之外。
+     *
+     * <p>自爆的幽匿爬行者需要在自身位置发出次声波，而它此刻已经被标记为死亡，
+     * 原版爆炸同样不会伤害爆源生物，因此把爆源传进来排除掉：否则它会给自己挂上
+     * 次声波减益，随后自爆残留的滞留云雾又会把这些减益扩散出去。
+     *
+     * @param excluded 不参与本次结算的生物，可为 {@code null} 表示不排除任何生物
+     */
+    public static void InfrasoundBurst(ServerLevel level, Vec3 center, float hurt_range, float affect_range, int damage, Entity causingEntity, @Nullable Entity excluded) {
         // 获取范围内的所有生物实体
         var entities = level.getEntitiesOfClass(LivingEntity.class,
-                net.minecraft.world.phys.AABB.ofSize(center, affect_range * 2, affect_range * 2, affect_range * 2));
+                net.minecraft.world.phys.AABB.ofSize(center, affect_range * 2, affect_range * 2, affect_range * 2),
+                entity -> entity != excluded);
 
         for (LivingEntity entity : entities) {
             // 计算实体与中心点的距离

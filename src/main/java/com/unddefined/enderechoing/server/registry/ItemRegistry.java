@@ -27,6 +27,8 @@ public class ItemRegistry {
             props -> new DeferredSpawnEggItem(EntityRegistry.SCULK_SPREADER_ENTITY, 0xFFFFFF, 0xFFFFFF, props));
     public static final DeferredItem<SpawnEggItem> SCULK_ZOMBIE_SPAWN_EGG = ITEMS.registerItem("sculk_zombie_spawn_egg",
             props -> new DeferredSpawnEggItem(EntityRegistry.SCULK_ZOMBIE_ENTITY, 0xFFFFFF, 0xFFFFFF, props));
+    public static final DeferredItem<SpawnEggItem> SCULK_CREEPER_SPAWN_EGG = ITEMS.registerItem("sculk_creeper_spawn_egg",
+            props -> new DeferredSpawnEggItem(EntityRegistry.SCULK_CREEPER_ENTITY, 0xFFFFFF, 0xFFFFFF, props));
     public static final DeferredItem<Item> WARP_CORE = ITEMS.registerItem("warp_core", WarpCore::new);
     public static final DeferredItem<Item> SCULK_MATTER = ITEMS.registerSimpleItem("sculk_matter", new Item.Properties());
     public static final DeferredItem<Item> RHYME_SHARD = ITEMS.registerSimpleItem("rhyme_shard", new Item.Properties()

@@ -1,9 +1,6 @@
 package com.unddefined.enderechoing.server.registry;
 
-import com.unddefined.enderechoing.entities.EnderEchoCrystalEntity;
-import com.unddefined.enderechoing.entities.EnderEchoingEyeEntity;
-import com.unddefined.enderechoing.entities.SculkSpreaderEntity;
-import com.unddefined.enderechoing.entities.SculkZombieEntity;
+import com.unddefined.enderechoing.entities.*;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
@@ -33,6 +30,11 @@ public class EntityRegistry {
     public static final DeferredHolder<EntityType<?>,EntityType<SculkZombieEntity>> SCULK_ZOMBIE_ENTITY = ENTITIES.register("sculk_zombie_entity", () ->
             EntityType.Builder.of(SculkZombieEntity::new, MobCategory.MONSTER)
                     .sized(0.6F, 1.95F).clientTrackingRange(8).build("sculk_zombie_entity")
+    );
+
+    public static final DeferredHolder<EntityType<?>, EntityType<SculkCreeperEntity>> SCULK_CREEPER_ENTITY = ENTITIES.register("sculk_creeper_entity", () ->
+            EntityType.Builder.of(SculkCreeperEntity::new, MobCategory.MONSTER)
+                    .sized(0.6F, 1.7F).clientTrackingRange(8).build("sculk_creeper_entity")
     );
 
 }

@@ -89,6 +89,16 @@ public abstract class CemAnimator<T extends LivingEntity> {
     }
 
     /**
+     * 写入 CEM 的 {@code sx/sy/sz}。
+     * <p>GeoLib 的缩放是在旋转之后、绕骨骼自身 pivot 应用的，与 CEM 的语义一致，因此不需要换算符号。
+     */
+    protected static void setScale(GeoBone bone, float sx, float sy, float sz) {
+        bone.setScaleX(sx);
+        bone.setScaleY(sy);
+        bone.setScaleZ(sz);
+    }
+
+    /**
      * CEM 的 {@code torad()}。
      */
     protected static float rad(float degrees) {
