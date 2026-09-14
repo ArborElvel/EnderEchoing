@@ -1,16 +1,16 @@
 package com.unddefined.enderechoing.client.model.entity;
 
-import com.unddefined.enderechoing.client.model.cem.SculkCreeperCemAnimator;
-import com.unddefined.enderechoing.entities.SculkCreeperEntity;
+import com.unddefined.enderechoing.client.model.cem.CreesperCemAnimator;
+import com.unddefined.enderechoing.entities.CreesperEntity;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.animation.AnimationState;
 import software.bernie.geckolib.model.DefaultedEntityGeoModel;
 
-public class SculkCreeperEntityModel<T extends SculkCreeperEntity> extends DefaultedEntityGeoModel<T> {
-    private final SculkCreeperCemAnimator cemAnimator = new SculkCreeperCemAnimator(this);
-    public SculkCreeperEntityModel() {
-        super(ResourceLocation.fromNamespaceAndPath("enderechoing", "sculk_creeper"));
+public class CreesperEntityModel<T extends CreesperEntity> extends DefaultedEntityGeoModel<T> {
+    private final CreesperCemAnimator cemAnimator = new CreesperCemAnimator(this);
+    public CreesperEntityModel() {
+        super(ResourceLocation.fromNamespaceAndPath("enderechoing", "creesper"));
     }
 
     @Override

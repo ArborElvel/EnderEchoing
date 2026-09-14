@@ -27,8 +27,8 @@ public class ItemRegistry {
             props -> new DeferredSpawnEggItem(EntityRegistry.SCULK_SPREADER_ENTITY, 0xFFFFFF, 0xFFFFFF, props));
     public static final DeferredItem<SpawnEggItem> SCULK_ZOMBIE_SPAWN_EGG = ITEMS.registerItem("sculk_zombie_spawn_egg",
             props -> new DeferredSpawnEggItem(EntityRegistry.SCULK_ZOMBIE_ENTITY, 0xFFFFFF, 0xFFFFFF, props));
-    public static final DeferredItem<SpawnEggItem> SCULK_CREEPER_SPAWN_EGG = ITEMS.registerItem("sculk_creeper_spawn_egg",
-            props -> new DeferredSpawnEggItem(EntityRegistry.SCULK_CREEPER_ENTITY, 0xFFFFFF, 0xFFFFFF, props));
+    public static final DeferredItem<SpawnEggItem> CREESPER_SPAWN_EGG = ITEMS.registerItem("creesper_spawn_egg",
+            props -> new DeferredSpawnEggItem(EntityRegistry.CREESPER_ENTITY, 0xFFFFFF, 0xFFFFFF, props));
     public static final DeferredItem<SpawnEggItem> SCULK_SKELETON_SPAWN_EGG = ITEMS.registerItem("sculk_skeleton_spawn_egg",
             props -> new DeferredSpawnEggItem(EntityRegistry.SCULK_SKELETON_ENTITY, 0xFFFFFF, 0xFFFFFF, props));
     public static final DeferredItem<Item> WARP_CORE = ITEMS.registerItem("warp_core", WarpCore::new);

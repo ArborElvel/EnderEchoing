@@ -2,7 +2,7 @@ package com.unddefined.enderechoing.server.events;
 
 import com.unddefined.enderechoing.EnderEchoing;
 import com.unddefined.enderechoing.blocks.EnderEchoCrystalBlock;
-import com.unddefined.enderechoing.entities.SculkCreeperEntity;
+import com.unddefined.enderechoing.entities.CreesperEntity;
 import com.unddefined.enderechoing.entities.SculkMob;
 import com.unddefined.enderechoing.entities.SculkSkeletonEntity;
 import com.unddefined.enderechoing.server.DataComponents.EnderEchoCrystalSavedData;
@@ -121,11 +121,11 @@ public class ServerEvents {
         sculkMob.dropSculkMobLoot(level, event.getSource(), event.getDrops());
     }
 
-    /** 幽匿爬行者自爆时不做物理爆炸，改为发出次声波 */
+    /** 次声波苦力怕自爆时不做物理爆炸，改为发出次声波 */
     @SubscribeEvent
-    public static void onSculkCreeperExplosion(ExplosionEvent.Start event) {
-        if (!(event.getExplosion().getDirectSourceEntity() instanceof SculkCreeperEntity creeper)) return;
-        if (event.getLevel() instanceof ServerLevel level) creeper.infrasoundExplode(level);
+    public static void onCreesperExplosion(ExplosionEvent.Start event) {
+        if (!(event.getExplosion().getDirectSourceEntity() instanceof CreesperEntity creesper)) return;
+        if (event.getLevel() instanceof ServerLevel level) creesper.infrasoundExplode(level);
         event.setCanceled(true);
     }
 

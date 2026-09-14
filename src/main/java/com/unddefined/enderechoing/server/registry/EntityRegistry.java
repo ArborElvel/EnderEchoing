@@ -32,9 +32,9 @@ public class EntityRegistry {
                     .sized(0.6F, 1.95F).clientTrackingRange(8).build("sculk_zombie_entity")
     );
 
-    public static final DeferredHolder<EntityType<?>, EntityType<SculkCreeperEntity>> SCULK_CREEPER_ENTITY = ENTITIES.register("sculk_creeper_entity", () ->
-            EntityType.Builder.of(SculkCreeperEntity::new, MobCategory.MONSTER)
-                    .sized(0.6F, 1.7F).clientTrackingRange(8).build("sculk_creeper_entity")
+    public static final DeferredHolder<EntityType<?>, EntityType<CreesperEntity>> CREESPER_ENTITY = ENTITIES.register("creesper_entity", () ->
+            EntityType.Builder.of(CreesperEntity::new, MobCategory.MONSTER)
+                    .sized(0.6F, 1.7F).clientTrackingRange(8).build("creesper_entity")
     );
 
     public static final DeferredHolder<EntityType<?>, EntityType<SculkSkeletonEntity>> SCULK_SKELETON_ENTITY = ENTITIES.register("sculk_skeleton_entity", () ->

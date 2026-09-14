@@ -15,7 +15,7 @@
       "maxCount": 1
     },
     {
-      "type": "enderechoing:sculk_creeper_entity",
+      "type": "enderechoing:creesper_entity",
       "weight": 20,
       "minCount": 1,
       "maxCount": 1

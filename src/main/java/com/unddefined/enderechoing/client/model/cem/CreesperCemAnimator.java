@@ -1,6 +1,6 @@
 package com.unddefined.enderechoing.client.model.cem;
 
-import com.unddefined.enderechoing.entities.SculkCreeperEntity;
+import com.unddefined.enderechoing.entities.CreesperEntity;
 import net.minecraft.util.Mth;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.model.GeoModel;
@@ -37,7 +37,7 @@ import software.bernie.geckolib.model.GeoModel;
  * <p>唯一一处主动偏离原式的是脚掌的前后滑动（见 {@link #FOOT_SLIDE_SCALE}）：FA 的滑动量是按它自己的腿部模型
  * 调的，放到原版尺寸的腿上会让后腿整根离开身体。
  */
-public final class SculkCreeperCemAnimator extends CemAnimator<SculkCreeperEntity> {
+public final class CreesperCemAnimator extends CemAnimator<CreesperEntity> {
 
     /**
      * CEM 里 {@code var.N + step * frame_time * 20} 的每 tick 步长。
@@ -56,12 +56,12 @@ public final class SculkCreeperCemAnimator extends CemAnimator<SculkCreeperEntit
      */
     private static final float FOOT_SLIDE_SCALE = 0.4F;
 
-    public SculkCreeperCemAnimator(GeoModel<?> model) {
+    public CreesperCemAnimator(GeoModel<?> model) {
         super(model);
     }
 
     @Override
-    protected void animate(CemFrame<SculkCreeperEntity> frame) {
+    protected void animate(CemFrame<CreesperEntity> frame) {
         GeoBone head = bone("head");
         GeoBone body = bone("body");
         GeoBone leg1 = bone("leg1");
@@ -344,7 +344,7 @@ public final class SculkCreeperCemAnimator extends CemAnimator<SculkCreeperEntit
      * （x 是右眼那侧的值，左眼为镜像的 {@code -0.5}），减掉它之后正好对应 geo.json 里画好的瞳孔位置。
      * 注意 FA 的“右”是模型的 -x，所以 geo.json 里 x&lt;0 的那只眼睛（当前叫 {@code left_eye}）用 {@code r_*} 那一套公式。
      */
-    private void animateEyes(CemFrame<SculkCreeperEntity> frame, float randomPhase, float age,
+    private void animateEyes(CemFrame<CreesperEntity> frame, float randomPhase, float age,
                              float limbSwing, float clampedYaw, float headPitch, float novelty1) {
         int hurtTime = frame.hurtTime();
 

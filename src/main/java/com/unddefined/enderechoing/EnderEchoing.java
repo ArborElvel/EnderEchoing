@@ -3,7 +3,7 @@ package com.unddefined.enderechoing;
 import com.mojang.logging.LogUtils;
 import com.unddefined.enderechoing.client.ModSoundEvents;
 import com.unddefined.enderechoing.client.gui.TunerMenu;
-import com.unddefined.enderechoing.entities.SculkCreeperEntity;
+import com.unddefined.enderechoing.entities.CreesperEntity;
 import com.unddefined.enderechoing.entities.SculkSkeletonEntity;
 import com.unddefined.enderechoing.entities.SculkSpreaderEntity;
 import com.unddefined.enderechoing.entities.SculkZombieEntity;
@@ -60,7 +60,7 @@ public class EnderEchoing {
     private static void registerEntityAttributes(EntityAttributeCreationEvent event) {
         event.put(EntityRegistry.SCULK_SPREADER_ENTITY.get(), SculkSpreaderEntity.createAttributes().build());
         event.put(EntityRegistry.SCULK_ZOMBIE_ENTITY.get(), SculkZombieEntity.createAttributes().build());
-        event.put(EntityRegistry.SCULK_CREEPER_ENTITY.get(), SculkCreeperEntity.createAttributes().build());
+        event.put(EntityRegistry.CREESPER_ENTITY.get(), CreesperEntity.createAttributes().build());
         event.put(EntityRegistry.SCULK_SKELETON_ENTITY.get(), SculkSkeletonEntity.createAttributes().build());
     }
 }

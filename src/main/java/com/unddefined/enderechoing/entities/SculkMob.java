@@ -324,7 +324,7 @@ public interface SculkMob {
      * 持续 {@value #INTRUSION_ON_ATTACK_DURATION} 刻。
      *
      * <p>由 {@code ServerEvents} 在 {@code LivingIncomingDamageEvent} 里对伤害来源为本类生物的伤害调用，
-     * 因此近战与被算作该生物造成的伤害（例如幽匿爬行者的次声波）都会走同一条规则。
+     * 因此近战与被算作该生物造成的伤害（例如次声波苦力怕的次声波）都会走同一条规则。
      * 攻击者自身、对目标是否已有效果的判定都不在这里处理，重复命中相当于刷新持续时间。
      *
      * @param target 被该生物攻击的生物

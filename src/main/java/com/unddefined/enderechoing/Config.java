@@ -84,17 +84,21 @@ public class Config {
             .comment("Damage dealt by the Sculk Whisper's damaging infrasound burst.")
             .defineInRange("sculk_whisper_hurt_damage",  15, 1, Integer.MAX_VALUE);
 
-    public static final ModConfigSpec.IntValue SCULK_CREEPER_INFRASOUND_HURT_RANGE = BUILDER
-            .comment("Range of the Sculk Creeper's damaging infrasound burst, in blocks.")
-            .defineInRange("sculk_creeper_infrasound_hurt_range",  5, 1, Integer.MAX_VALUE);
+    public static final ModConfigSpec.IntValue CREESPER_INFRASOUND_HURT_RANGE = BUILDER
+            .comment("Range of the Creesper's damaging infrasound burst, in blocks.")
+            .defineInRange("creesper_infrasound_hurt_range",  5, 1, Integer.MAX_VALUE);
 
-    public static final ModConfigSpec.IntValue SCULK_CREEPER_INFRASOUND_AFFECT_RANGE = BUILDER
-            .comment("Range of the Sculk Creeper's status-effect infrasound burst, in blocks.")
-            .defineInRange("sculk_creeper_infrasound_affect_range",  15, 1, Integer.MAX_VALUE);
+    public static final ModConfigSpec.IntValue CREESPER_INFRASOUND_AFFECT_RANGE = BUILDER
+            .comment("Range of the Creesper's status-effect infrasound burst, in blocks.")
+            .defineInRange("creesper_infrasound_affect_range",  15, 1, Integer.MAX_VALUE);
 
-    public static final ModConfigSpec.IntValue SCULK_CREEPER_INFRASOUND_HURT_DAMAGE = BUILDER
-            .comment("Damage dealt by the Sculk Creeper's damaging infrasound burst.")
-            .defineInRange("sculk_creeper_infrasound_hurt_damage",  10, 1, Integer.MAX_VALUE);
+    public static final ModConfigSpec.IntValue CREESPER_INFRASOUND_HURT_DAMAGE = BUILDER
+            .comment("Damage dealt by the Creesper's damaging infrasound burst.")
+            .defineInRange("creesper_infrasound_hurt_damage",  10, 1, Integer.MAX_VALUE);
+
+    public static final ModConfigSpec.DoubleValue CREESPER_STEP_SOUND_VOLUME = BUILDER
+            .comment("Volume multiplier for the Creesper's footstep sounds (1.0 = vanilla volume).")
+            .defineInRange("creesper_step_sound_volume",  0.1D, 0.0D, 1.0D);
 
     public static final ModConfigSpec.IntValue SCULK_SHRIEKER_CAN_SUMMON_CHANCE = BUILDER
             .comment("1 in N chance for a Sculk Shrieker to gain CAN_SUMMON when a nearby entity dies on a Sculk Catalyst.")
