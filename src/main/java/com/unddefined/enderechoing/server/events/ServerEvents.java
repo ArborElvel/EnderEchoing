@@ -4,6 +4,7 @@ import com.unddefined.enderechoing.EnderEchoing;
 import com.unddefined.enderechoing.blocks.EnderEchoCrystalBlock;
 import com.unddefined.enderechoing.entities.SculkCreeperEntity;
 import com.unddefined.enderechoing.entities.SculkMob;
+import com.unddefined.enderechoing.entities.SculkSkeletonEntity;
 import com.unddefined.enderechoing.server.DataComponents.EnderEchoCrystalSavedData;
 import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
 import com.unddefined.enderechoing.server.EnderEchoingEyeLocator;
@@ -176,6 +177,16 @@ public class ServerEvents {
         if (!(event.getSource().getEntity() instanceof SculkMob sculkMob)) return;
         if (!(event.getEntity().level() instanceof ServerLevel)) return;
         sculkMob.tryApplyIntrusionOnAttack(event.getEntity());
+    }
+
+    /**
+     * 幽匿骷髅击中目标后使其失明、失聪（近战与它射出的箭都包含在内）
+     */
+    @SubscribeEvent
+    public static void onSculkSkeletonAttack(LivingIncomingDamageEvent event) {
+        if (!(event.getSource().getEntity() instanceof SculkSkeletonEntity skeleton)) return;
+        if (!(event.getEntity().level() instanceof ServerLevel)) return;
+        skeleton.applyBlindnessAndDeafnessOnHit(event.getEntity());
     }
 
     /**

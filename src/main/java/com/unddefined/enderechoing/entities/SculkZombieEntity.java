@@ -140,7 +140,8 @@ public class SculkZombieEntity extends Zombie implements GeoEntity, SculkMob, Vi
         public void onReceiveVibration(ServerLevel level, BlockPos pos, Holder<GameEvent> gameEvent,
                                        @Nullable Entity entity, @Nullable Entity playerEntity, float distance) {
             getNavigation().stop();
-            vibrationCooldown = 40;
+            setTarget(null);
+            vibrationCooldown = 60;
             entityData.set(VIBRATION_ACTIVE, true);
             playSound(SoundEvents.SCULK_CLICKING, 1.0F, random.nextFloat() * 0.2F + 0.8F);
             int frequency = VibrationSystem.getGameEventFrequency(gameEvent);

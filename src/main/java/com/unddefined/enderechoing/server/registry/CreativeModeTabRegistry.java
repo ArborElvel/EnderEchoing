@@ -50,6 +50,7 @@ public class CreativeModeTabRegistry {
                 output.accept(ItemRegistry.SCULK_SPREADER_SPAWN_EGG.get());
                 output.accept(ItemRegistry.SCULK_ZOMBIE_SPAWN_EGG.get());
                 output.accept(ItemRegistry.SCULK_CREEPER_SPAWN_EGG.get());
+                output.accept(ItemRegistry.SCULK_SKELETON_SPAWN_EGG.get());
                 output.accept(Items.WARDEN_SPAWN_EGG);
             }).build());
 }

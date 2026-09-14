@@ -19,6 +19,12 @@
       "weight": 20,
       "minCount": 1,
       "maxCount": 1
+    },
+    {
+      "type": "enderechoing:sculk_skeleton_entity",
+      "weight": 30,
+      "minCount": 1,
+      "maxCount": 2
     }
   ]
 }
