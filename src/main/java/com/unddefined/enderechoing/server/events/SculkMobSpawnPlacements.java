@@ -1,6 +1,7 @@
 package com.unddefined.enderechoing.server.events;
 
 import com.unddefined.enderechoing.entities.SculkMob;
+import com.unddefined.enderechoing.entities.SculverfishEntity;
 import com.unddefined.enderechoing.server.registry.EntityRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
@@ -28,6 +29,9 @@ import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent;
  * <p>深暗之域折中：原版该生物群系没有任何生成条目（不刷任何生物），{@code add_spawns} 会连空列表
  * 一起补上，所以那里只有幽匿生物这两个条目、没有别的怪物分摊权重。为了不把监守者的地盘填满，
  * 深暗之域的概率再乘 {@value #DEEP_DARK_CHANCE_FACTOR} 压低。
+ *
+ * <p>幽匿蠹虫额外要求生成位置直接位于完整的幽匿系方块上，见
+ * {@link #checkSculverfishSpawnRules}；幽匿脉络这类没有完整碰撞体积的方块不能作为生成点。
  */
 public class SculkMobSpawnPlacements {
 
@@ -59,6 +63,20 @@ public class SculkMobSpawnPlacements {
         event.register(EntityRegistry.SCULK_SKELETON_ENTITY.get(), SpawnPlacementTypes.ON_GROUND,
                 Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, SculkMobSpawnPlacements::checkSculkMobSpawnRules,
                 RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(EntityRegistry.SCULVERFISH_ENTITY.get(), SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, SculkMobSpawnPlacements::checkSculverfishSpawnRules,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+    }
+
+    /**
+     * 幽匿蠹虫的自然生成判定：必须直接生成在完整的幽匿系方块上，
+     * 其余黑暗、概率与深暗之域折中规则与其它幽匿生物一致。
+     */
+    private static <T extends Mob> boolean checkSculverfishSpawnRules(EntityType<T> type, ServerLevelAccessor level,
+                                                                     MobSpawnType spawnType, BlockPos pos, RandomSource random) {
+        if (!SculverfishEntity.isFullSculkBlock(level, pos.below())) return false;
+
+        return checkSculkMobSpawnRules(type, level, spawnType, pos, random);
     }
 
     /**

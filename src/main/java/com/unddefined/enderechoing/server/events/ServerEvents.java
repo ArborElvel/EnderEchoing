@@ -5,6 +5,7 @@ import com.unddefined.enderechoing.blocks.EnderEchoCrystalBlock;
 import com.unddefined.enderechoing.entities.CreesperEntity;
 import com.unddefined.enderechoing.entities.SculkMob;
 import com.unddefined.enderechoing.entities.SculkSkeletonEntity;
+import com.unddefined.enderechoing.entities.SculverfishEntity;
 import com.unddefined.enderechoing.server.DataComponents.EnderEchoCrystalSavedData;
 import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
 import com.unddefined.enderechoing.server.EnderEchoingEyeLocator;
@@ -41,6 +42,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.neoforged.neoforge.event.VanillaGameEvent;
 import net.neoforged.neoforge.event.brewing.RegisterBrewingRecipesEvent;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.living.*;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -76,6 +78,16 @@ public class ServerEvents {
     public static void onRegisterBrewingRecipes(RegisterBrewingRecipesEvent event) {
         // 幽匿脉络 + 粗制药水 → 幽匿侵扰药水
         event.getBuilder().addMix(Potions.AWKWARD, Items.SCULK_VEIN, PotionRegistry.SCULK_INTRUSION);
+    }
+
+    @SubscribeEvent
+    public static void onEntityJoinLevel(EntityJoinLevelEvent event) {
+        // Mob.finalizeSpawn 在 1.21.1 已标记过时，这里用实体入世界事件初始化新生成的幽匿蠹虫；
+        // loadedFromDisk 与实体自身的一次性标记保证读档、跨维度不会重新触发潜伏初始化。
+        if (event.loadedFromDisk() || event.getLevel().isClientSide()) return;
+        if (event.getEntity() instanceof SculverfishEntity sculverfish) {
+            sculverfish.initializeSpawnIfNeeded();
+        }
     }
 
     @SubscribeEvent

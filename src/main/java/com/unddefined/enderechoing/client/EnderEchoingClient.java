@@ -96,6 +96,7 @@ public class EnderEchoingClient {
         event.registerEntityRenderer(EntityRegistry.SCULK_ZOMBIE_ENTITY.get(), SculkZombieEntityRenderer::new);
         event.registerEntityRenderer(EntityRegistry.CREESPER_ENTITY.get(), CreesperEntityRenderer::new);
         event.registerEntityRenderer(EntityRegistry.SCULK_SKELETON_ENTITY.get(), SculkSkeletonEntityRenderer::new);
+        event.registerEntityRenderer(EntityRegistry.SCULVERFISH_ENTITY.get(), SculverfishEntityRenderer::new);
         event.registerEntityRenderer(EntityRegistry.ENDER_ECHOING_EYE_ENTITY.get(),
                 c -> new ThrownItemRenderer<>(c, 1.0F, true));
     }

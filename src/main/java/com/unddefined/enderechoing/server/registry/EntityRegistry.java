@@ -42,4 +42,9 @@ public class EntityRegistry {
                     .sized(0.6F, 1.99F).clientTrackingRange(8).build("sculk_skeleton_entity")
     );
 
+    public static final DeferredHolder<EntityType<?>, EntityType<SculverfishEntity>> SCULVERFISH_ENTITY = ENTITIES.register("sculverfish_entity", () ->
+            EntityType.Builder.of(SculverfishEntity::new, MobCategory.MONSTER)
+                    .sized(1.0F, 0.5F).clientTrackingRange(8).build("sculverfish_entity")
+    );
+
 }
