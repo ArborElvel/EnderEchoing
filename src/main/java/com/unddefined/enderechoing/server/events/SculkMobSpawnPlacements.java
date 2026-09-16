@@ -36,10 +36,10 @@ import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent;
 public class SculkMobSpawnPlacements {
 
     /** 附近没有幽匿系方块时的生成概率。 */
-    public static final float SPAWN_CHANCE = 0.15F;
+    public static final float SPAWN_CHANCE = 0.55F;
 
     /** 附近有幽匿系方块时的生成概率。 */
-    public static final float SPAWN_CHANCE_NEAR_SCULK = 0.5F;
+    public static final float SPAWN_CHANCE_NEAR_SCULK = 1.5F;
 
     /** 深暗之域的概率倍率：原版这里不刷任何生物，折中保留但明显压低。 */
     public static final float DEEP_DARK_CHANCE_FACTOR = 0.1F;

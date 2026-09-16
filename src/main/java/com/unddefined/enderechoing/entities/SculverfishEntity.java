@@ -9,7 +9,10 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -40,16 +43,19 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * 死亡时的幽匿绽放、基础掉落、次声波压制、攻击附带幽匿侵扰等）。
  *
  * <p>自己的行为：只生成在完整的幽匿系方块上，常态潜伏在幽匿块中并在相邻幽匿块之间移动；
- * 玩家进入 {@value #VIEW_RANGE} 格视野后钻出攻击，目标丢失或地面停留超时后再钻回幽匿块，
- * 在幽匿块上受伤时也会优先钻地；这些反应共同形成钻出攻击、钻地换位的游击循环。
+ * 玩家进入 {@value #VIEW_RANGE} 格视野后钻出攻击，击中目标、目标丢失或地面停留超时后再钻回幽匿块，
+ * 在幽匿块上受伤时同样优先钻地；这些反应共同形成打了就跑的游击循环。
  * 振动接收尚未实现。
  */
 public class SculverfishEntity extends Silverfish implements GeoEntity, SculkMob {
     /** 视觉/索敌范围（格），同时用于钻出判定和原版 {@link Attributes#FOLLOW_RANGE}。 */
-    public static final double VIEW_RANGE = 4.0D;
+    public static final double VIEW_RANGE = 3.0D;
 
     /** 潜伏时允许在锚点周围移动/追击的半径（格）。 */
     public static final int HOME_RADIUS = 8;
+
+    /** 同一格幽匿块里最多容纳的幽匿蠹虫数量；已经挤满的方块不会再被选作钻入目标。 */
+    public static final int MAX_PER_BLOCK = 1;
 
     /** 地面上最长停留时间（tick），超过后强制钻回幽匿块，形成游击循环。 */
     private static final int MAX_SURFACE_TICKS = 60;
@@ -97,11 +103,20 @@ public class SculverfishEntity extends Silverfish implements GeoEntity, SculkMob
     private int ticksWithoutTarget;
 
     /**
-     * 受伤后的钻地请求，由 {@link SculverfishBurrowGoal} 消费。
+     * 钻地请求，由 {@link SculverfishBurrowGoal} 消费。
      *
-     * <p>在幽匿块上受伤时置位：地面活动时立刻钻回幽匿块，已经潜伏时立刻在地下换位。
+     * <p>在幽匿块上受伤、或攻击击中目标后置位：地面活动时立刻钻回幽匿块（脚下没有就先走到附近
+     * 的幽匿块），已经潜伏时立刻在地下换位。
      */
     private boolean burrowRequested;
+
+    /**
+     * 上一次钻地尝试失败后的等待计时（tick）。
+     *
+     * <p>由 {@link SculverfishBurrowGoal} 在「附近找不到幽匿块」「走过去走不到」时置位：
+     * 到点之前不再重新尝试接近幽匿块，避免原地反复起停（看起来就是原地抖动）。
+     */
+    private int burrowRetryDelay;
 
     /** 新生成实体首次加入世界后只初始化一次；读档实体在 NBT 读取时直接标记为已初始化。 */
     private boolean spawnInitialized;
@@ -132,8 +147,18 @@ public class SculverfishEntity extends Silverfish implements GeoEntity, SculkMob
     }
 
     @Override
+    public void tick() {
+        // 客户端按同步过来的状态对齐物理标记（服务端在状态切换时设置）。客户端不改服务端权威状态，
+        // 但必须知道“它现在埋在方块里”，否则自己的重力和方块碰撞会把它顶出来，和服务端位置互相拉扯。
+        if (level().isClientSide) updateBurrowPhysics(getBurrowState());
+        super.tick();
+    }
+
+    @Override
     public void aiStep() {
         super.aiStep();
+
+        if (!level().isClientSide && burrowRetryDelay > 0) burrowRetryDelay--;
 
         if (!level().isClientSide && getBurrowState() == BurrowState.ACTIVE) {
             surfaceTicks++;
@@ -156,10 +181,39 @@ public class SculverfishEntity extends Silverfish implements GeoEntity, SculkMob
     public boolean hurt(DamageSource source, float amount) {
         boolean damaged = super.hurt(source, amount);
         // 受伤时优先钻地：只要身上/脚下还是幽匿块，就放下当前行为先钻回地下
-        if (damaged && !level().isClientSide && isOnSculkBlock()) {
-            burrowRequested = true;
-        }
+        if (damaged && !level().isClientSide && isOnSculkBlock()) burrowRequested = true;
         return damaged;
+    }
+
+    /**
+     * 免疫“卡在方块里”的窒息伤害。
+     *
+     * <p>它是钻进幽匿块里生活的生物，钻入/钻出、换位时身体短暂和方块重叠属于正常状态；
+     * 潜伏期本身 {@code noPhysics} 不会受伤，这条只作为兜底，避免偶发的边角情况把它慢慢磨死。
+     */
+    @Override
+    public boolean isInvulnerableTo(DamageSource source) {
+        return source.is(DamageTypes.IN_WALL) || super.isInvulnerableTo(source);
+    }
+
+    /**
+     * 药水效果照常生效，但不把粒子同步给客户端。
+     *
+     * <p>它平时藏在幽匿块里，药水旋涡粒子会从方块边缘冒出来暴露位置；发光效果本身保留
+     * （发光只影响轮廓渲染，见 {@code SculverfishEntityRenderer}，轮廓是穿墙的）。
+     */
+    @Override
+    protected void updateInvisibilityStatus() {
+        super.updateInvisibilityStatus();
+        removeEffectParticles();
+    }
+
+    @Override
+    public boolean doHurtTarget(Entity target) {
+        boolean hit = super.doHurtTarget(target);
+        // 攻击击中目标后优先钻地：打一下就撤，形成打了就跑的游击循环
+        if (hit && !level().isClientSide) burrowRequested = true;
+        return hit;
     }
 
     @Override
@@ -178,7 +232,7 @@ public class SculverfishEntity extends Silverfish implements GeoEntity, SculkMob
     }
 
     /**
-     * 新生成实体首次加入世界后初始化潜伏状态。
+     * 新生成实体首次加入世界后初始化钻地状态：世界生成的直接潜伏，其余留在原地再自己钻进去。
      *
      * <p>由 {@code ServerEvents} 监听 {@code EntityJoinLevelEvent} 调用；读档实体在
      * {@link #readAdditionalSaveData(CompoundTag)} 中已经标记为初始化，不会重新潜伏。
@@ -191,13 +245,52 @@ public class SculverfishEntity extends Silverfish implements GeoEntity, SculkMob
         AttributeInstance followRange = getAttribute(Attributes.FOLLOW_RANGE);
         if (followRange != null) followRange.removeModifier(RANDOM_SPAWN_BONUS_ID);
 
+        // 世界生成出来的个体直接潜伏进最近的幽匿块；刷怪蛋、指令召唤、刷怪笼这些“看得见的生成方式”
+        // 保留在生成位置上，交给钻地 Goal 自己钻进去——否则会凭空出现在方块里，看不到钻入过程。
+        if (!spawnsBuried()) {
+            setBurrowState(BurrowState.ACTIVE);
+            return;
+        }
+
         BlockPos anchor = findSculkAnchor(level(), blockPosition(), 2, 2);
-        if (anchor != null) {
+        if (anchor != null && !isBurrowBlockFull(level(), anchor, this)) {
             setBurrowAnchor(anchor);
             setBurrowState(BurrowState.BURROWED);
             moveToBurrowCenter(anchor);
         } else setBurrowState(BurrowState.ACTIVE);
 
+    }
+
+    /**
+     * 生成时是否直接潜伏。
+     *
+     * <p>只有世界生成（自然刷新、区块生成）的个体直接潜伏；刷怪蛋、指令召唤、刷怪笼等玩家可见的
+     * 生成方式一律先留在原地，由钻地 Goal 自己钻进去。读档实体的生成类型由 NeoForge 从存档恢复，
+     * 而且读档时已经标记过 {@code spawnInitialized}，不会走到这里。
+     */
+    private boolean spawnsBuried() {
+        MobSpawnType spawnType = getSpawnType();
+        return spawnType == MobSpawnType.NATURAL || spawnType == MobSpawnType.CHUNK_GENERATION;
+    }
+
+    /**
+     * 指定方块里已经藏了几只同类。
+     *
+     * <p>「已经潜伏在这里」和「正在钻进/这一格」的都算上，避免两只同时选中同一格后叠在一起。
+     * 判定用方块整格的碰撞箱，所以正在钻入、身体已经进到这一格的个体也会被算进去。
+     *
+     * @param except 不计入的个体（一般是调用者自己），可为 {@code null}
+     */
+    public static int countBurrowedIn(Level level, BlockPos pos, @Nullable SculverfishEntity except) {
+        return level.getEntitiesOfClass(SculverfishEntity.class, new AABB(pos),
+                other -> other != except
+                        && other.getBurrowState() != BurrowState.ACTIVE
+                        && (pos.equals(other.burrowAnchor) || pos.equals(other.blockPosition()))).size();
+    }
+
+    /** 这一格幽匿块是否已经挤满同类（达到 {@value #MAX_PER_BLOCK} 只）。 */
+    public static boolean isBurrowBlockFull(Level level, BlockPos pos, @Nullable SculverfishEntity except) {
+        return countBurrowedIn(level, pos, except) >= MAX_PER_BLOCK;
     }
 
     @Override
@@ -272,8 +365,7 @@ public class SculverfishEntity extends Silverfish implements GeoEntity, SculkMob
 
     private void applyBurrowState(BurrowState state) {
         boolean active = state == BurrowState.ACTIVE;
-        this.noPhysics = !active;
-        this.setNoGravity(!active);
+        updateBurrowPhysics(state);
         this.surfaceTicks = 0;
         this.ticksWithoutTarget = 0;
         if (!active) {
@@ -284,6 +376,29 @@ public class SculverfishEntity extends Silverfish implements GeoEntity, SculkMob
             // 回到地面说明钻地请求已经处理完（成功钻出或找不到落点），不再保留
             this.burrowRequested = false;
         }
+    }
+
+    /**
+     * 按钻地状态设置无碰撞与无重力。
+     *
+     * <p>服务端在状态切换时调用（{@link #applyBurrowState(BurrowState)}）；客户端每 tick 按同步过来的
+     * 状态对齐一次——客户端不能改服务端权威状态，但必须知道“它现在埋在方块里”，否则客户端的重力和
+     * 方块碰撞会把它从方块里顶出来，再被服务端位置拉回去，表现为贴着幽匿块原地抖动。
+     */
+    private void updateBurrowPhysics(BurrowState state) {
+        boolean active = state == BurrowState.ACTIVE;
+        this.noPhysics = !active;
+        this.setNoGravity(!active);
+    }
+
+    /** 上一次钻地尝试失败的等待是否已经结束，由 {@link SculverfishBurrowGoal} 查询。 */
+    public boolean isBurrowReady() {
+        return burrowRetryDelay <= 0;
+    }
+
+    /** 记录一次钻地尝试失败，{@code ticks} 之内不再重新尝试接近幽匿块。 */
+    public void delayBurrow(int ticks) {
+        this.burrowRetryDelay = Math.max(this.burrowRetryDelay, ticks);
     }
 
     /** 地面停留超时、目标丢失或受伤是否已经满足钻回条件，由 {@link SculverfishBurrowGoal} 查询。 */

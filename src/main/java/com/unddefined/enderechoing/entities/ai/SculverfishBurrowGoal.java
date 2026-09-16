@@ -50,8 +50,8 @@ public class SculverfishBurrowGoal extends Goal {
     /** 钻出/钻入最多持续的时间（tick），防止被卡住。 */
     private static final int MAX_TRANSITION_TICKS = 12;
 
-    /** 受伤钻地后至少保持潜伏的时间（tick），期间只在地下换位，不会马上钻出。 */
-    private static final int HURT_HIDE_TICKS = 60;
+    /** 撤退钻地（受伤或击中目标）后至少保持潜伏的时间（tick），期间只在地下换位，不会马上钻出。 */
+    private static final int RETREAT_HIDE_TICKS = 60;
 
     /** 钻出/钻入一次的方块碎屑粒子数量与水平散布（格），对齐原版监守者挖地的表现。 */
     private static final int DIG_PARTICLE_COUNT = 10;
@@ -61,8 +61,14 @@ public class SculverfishBurrowGoal extends Goal {
     private static final int DIG_SIDE_PARTICLE_COUNT = 6;
     private static final double DIG_SIDE_OFFSET = 0.02D;
 
-    /** 钻入/钻出允许的最大位移（格）的平方；目标必须就在脚下或紧邻，避免“远程钻进”方块。 */
-    private static final double MAX_TRANSITION_DISTANCE_SQR = 2.25D;
+    /**
+     * 钻入允许的最大位移（格）的平方。
+     *
+     * <p>本地候选的最坏几何是「斜下方一格 + 站在自己格子的最远端」：1.0 宽的碰撞箱下约 1.75 格，
+     * 所以取 2.0 格，既覆盖全部“脚边”目标，又小于 {@value #MAX_TRANSITION_TICKS} tick 过渡能走完的
+     * {@code 12 × 0.18 = 2.16} 格，末尾的兜底 {@code moveTo} 不会造成可见位移。
+     */
+    private static final double MAX_TRANSITION_DISTANCE_SQR = 4.0D;
 
     /** 暴露在外（地面活动）时，向外搜索可钻幽匿块的最大水平/竖直半径（格）。 */
     private static final int ANCHOR_SEARCH_RADIUS = 16;
@@ -77,6 +83,15 @@ public class SculverfishBurrowGoal extends Goal {
     private static final int MAX_REPATH_INTERVAL = 20;
     private static final int MAX_REPATH_FAILURES = 3;
 
+    /** 接近幽匿块失败（附近没有、或走不到）后的等待时间（tick），避免原地反复起停。 */
+    private static final int BURROW_RETRY_DELAY_TICKS = 100;
+
+    /** 寻路停下后还允许直接朝目标挪的最大距离（格）的平方。 */
+    private static final double STEER_DISTANCE_SQR = 9.0D;
+
+    /** 直接朝目标挪动时每 tick 位移（格）。 */
+    private static final double STEER_SPEED = 0.2D;
+
     private final SculverfishEntity mob;
     private final List<BlockPos> relocatePath = new ArrayList<>();
 
@@ -85,12 +100,17 @@ public class SculverfishBurrowGoal extends Goal {
     private int transitionTicks;
     private int hideTicks;
 
-    /** 本次钻地是否由受伤触发；受伤钻地在钻到底后要先躲一段时间。 */
-    private boolean hurtDive;
+    /** 本次钻地是不是撤退（受伤或击中目标）；撤退钻地在钻到底后要先躲一段时间。 */
+    private boolean retreatDive;
 
     /** 附近找到的幽匿块；不为空时处于地面接近阶段，走到它旁边再钻进去。 */
     @Nullable
     private BlockPos approachTarget;
+
+    /** 接近阶段准备钻进去的那块幽匿块；走过去时一直盯着它。 */
+    @Nullable
+    private BlockPos approachBlock;
+
     private int approachTicks;
     private int repathCooldown;
     private int repathFailures;
@@ -109,7 +129,7 @@ public class SculverfishBurrowGoal extends Goal {
     public boolean canUse() {
         if (!mob.isAlive()) return false;
         if (mob.getBurrowState() == BurrowState.ACTIVE) {
-            // 受伤、目标丢失或地面停留超时后，主动接管战斗 Goal 开始钻地
+            // 受伤、击中目标、目标丢失或地面停留超时后，主动接管战斗 Goal 开始钻地
             return mob.shouldBurrow();
         }
         return true;
@@ -125,8 +145,8 @@ public class SculverfishBurrowGoal extends Goal {
     @Override
     public void start() {
         if (mob.getBurrowState() == BurrowState.ACTIVE) {
-            // 受伤钻地的请求要在 refreshBurrowState 清掉它之前取出来
-            this.hurtDive = mob.consumeBurrowRequest();
+            // 撤退钻地的请求要在 refreshBurrowState 清掉它之前取出来
+            this.retreatDive = mob.consumeBurrowRequest();
         }
         mob.refreshBurrowState();
         mob.getNavigation().stop();
@@ -134,12 +154,14 @@ public class SculverfishBurrowGoal extends Goal {
         if (mob.getBurrowState() == BurrowState.ACTIVE) {
             if (findBurrowDestination() != null) {
                 mob.setBurrowState(BurrowState.BURROWING);
-            } else {
+            } else if (mob.isBurrowReady()) {
                 // 脚下/紧邻没有幽匿块：先在附近搜一个能走过去的，走过去再钻
                 this.approachTarget = findApproachTarget();
                 this.approachTicks = 0;
                 this.repathCooldown = 0;
                 this.repathFailures = 0;
+                // 附近 16 × 8 格内都没有可钻的幽匿块，就别每 20 tick 再扫一遍了
+                if (this.approachTarget == null) mob.delayBurrow(BURROW_RETRY_DELAY_TICKS);
             }
         }
 
@@ -179,10 +201,11 @@ public class SculverfishBurrowGoal extends Goal {
         transitionTarget = null;
         emergeTarget = null;
         approachTarget = null;
+        approachBlock = null;
         approachTicks = 0;
         repathCooldown = 0;
         repathFailures = 0;
-        hurtDive = false;
+        retreatDive = false;
         hideTicks = 0;
         mob.getNavigation().stop();
     }
@@ -200,16 +223,17 @@ public class SculverfishBurrowGoal extends Goal {
             if (replacement != null) {
                 mob.setBurrowAnchor(replacement);
                 beginBurrowing(replacement);
-            } else {
+            } else if (!isEmbedded()) {
                 // 潜伏点消失且附近没有幽匿块时只能回到地面，避免卡在非幽匿方块里
                 mob.setBurrowState(BurrowState.ACTIVE);
             }
+            // 身体还埋在方块里时不能切回 ACTIVE：出不去就会开始吃窒息伤害，先留在方块里等机会
             return;
         }
 
         if (mob.consumeBurrowRequest()) {
-            // 受伤时优先钻地：先在地下换位并躲一段时间，避免钻回去又被同一个目标打出来
-            hideTicks = HURT_HIDE_TICKS;
+            // 撤退（受伤或击中目标）：先在地下换位并躲一段时间，避免钻回去又被同一个目标打出来
+            hideTicks = RETREAT_HIDE_TICKS;
             relocateCooldown = 0;
         }
 
@@ -265,7 +289,14 @@ public class SculverfishBurrowGoal extends Goal {
             transitionTicks = 0;
             if (!isValidBurrowTarget(transitionTarget)) {
                 transitionTarget = null;
-                mob.setBurrowState(BurrowState.ACTIVE);
+                mob.delayBurrow(BURROW_RETRY_DELAY_TICKS);
+                // 中止时如果身体已经进到方块里，不能直接切回 ACTIVE：那会开始吃窒息伤害。
+                // 先就地钻出去（成功时会自己切回 ACTIVE），钻不出去就先留在方块里（noPhysics 不会窒息）。
+                if (!isEmbedded()) {
+                    mob.setBurrowState(BurrowState.ACTIVE);
+                } else if (!tryEmergeFromCurrentBlock()) {
+                    mob.setBurrowState(BurrowState.BURROWED);
+                }
                 return;
             }
         }
@@ -280,10 +311,10 @@ public class SculverfishBurrowGoal extends Goal {
             relocatePath.clear();
             pathIndex = 0;
             relocateCooldown = nextRelocateCooldown();
-            if (hurtDive) {
-                // 受伤钻地：先在地下躲一段时间并换位，再考虑钻出
-                hurtDive = false;
-                hideTicks = HURT_HIDE_TICKS;
+            if (retreatDive) {
+                // 撤退钻地：先在地下躲一段时间并换位，再考虑钻出
+                retreatDive = false;
+                hideTicks = RETREAT_HIDE_TICKS;
                 relocateCooldown = 0;
             }
             return;
@@ -313,25 +344,36 @@ public class SculverfishBurrowGoal extends Goal {
             return;
         }
 
-        mob.getLookControl().setLookAt(Vec3.atBottomCenterOf(target));
+        Vec3 walkTarget = Vec3.atBottomCenterOf(target);
 
-        if (--repathCooldown > 0) return;
-
-        repathCooldown = MIN_REPATH_INTERVAL + mob.getRandom().nextInt(MAX_REPATH_INTERVAL - MIN_REPATH_INTERVAL + 1);
-        boolean pathed = mob.getNavigation().moveTo(target.getX() + 0.5D, target.getY(), target.getZ() + 0.5D,
-                APPROACH_SPEED);
-        if (pathed) {
-            repathFailures = 0;
-        } else if (++repathFailures >= MAX_REPATH_FAILURES) {
-            // 走不到（被挡住、目标在限制范围外等）：放弃接近，把控制权还给战斗 Goal
-            cancelApproach();
+        // 寻路在离目标 1 格以内就算“到了”，而且 1.0 宽的碰撞箱会让它要求目标格两侧各留一格，
+        // 贴着幽匿块（尤其是墙面）的落脚点很可能根本找不到路。这两种情况都会让它停在目标一两格之外
+        // 反复重寻路却不钻——目标已经不远时就直接朝它挪过去，靠自己走到钻入范围里。
+        if (mob.getNavigation().isDone() && mob.position().distanceToSqr(walkTarget) <= STEER_DISTANCE_SQR) {
+            // 被一格的台阶挡住就跳一下，否则只会在台阶前一直顶着
+            if (mob.horizontalCollision && mob.onGround()) mob.getJumpControl().jump();
+            moveTowards(walkTarget, STEER_SPEED);
+        } else if (--repathCooldown <= 0) {
+            repathCooldown = MIN_REPATH_INTERVAL + mob.getRandom().nextInt(MAX_REPATH_INTERVAL - MIN_REPATH_INTERVAL + 1);
+            if (mob.getNavigation().moveTo(walkTarget.x, walkTarget.y, walkTarget.z, APPROACH_SPEED)) {
+                repathFailures = 0;
+            } else if (++repathFailures >= MAX_REPATH_FAILURES) {
+                // 走不到（被挡住、目标在限制范围外等）：放弃接近，把控制权还给战斗 Goal
+                cancelApproach();
+                return;
+            }
         }
+
+        // 一直盯着要钻进去的那块幽匿块（moveTowards 设的是落脚点，这里覆盖回目标方块）
+        mob.getLookControl().setLookAt(approachBlock != null ? Vec3.atCenterOf(approachBlock) : walkTarget);
     }
 
     /** 放弃接近并停下导航。 */
     private void cancelApproach() {
         approachTarget = null;
+        approachBlock = null;
         mob.getNavigation().stop();
+        mob.delayBurrow(BURROW_RETRY_DELAY_TICKS);
     }
 
     /** 开始钻出：记录目标并播放钻出表现。 */
@@ -361,35 +403,54 @@ public class SculverfishBurrowGoal extends Goal {
      * 只能钻入自身所在、或紧邻（脚下、同级相邻、斜下方、正上方）的一格完整幽匿块。
      *
      * <p>它可以在垂直方向的幽匿块里上下移动，也能从侧面钻进贴着的幽匿块。
-     * <p>不搜索更远的目标：钻入是一次短距离的过渡动画，跨格目标会变成从远处“飞进”幽匿块。
+     *
+     * <p>所有候选都要通过 {@link #isValidBurrowTarget} 才算数：取目标和校验目标必须用同一套判据，
+     * 否则会出现「取到了目标、过渡却判定太远而中止」的反复——那正是站在幽匿块旁边却原地抖动的原因。
+     * 更远的目标不属于“脚边”，交给地面接近阶段走过去再钻。
      */
     @Nullable
     private BlockPos findBurrowDestination() {
         BlockPos current = mob.blockPosition();
-        if (SculverfishEntity.isFullSculkBlock(mob.level(), current)) return current;
+        if (isValidBurrowTarget(current)) return current;
 
         BlockPos below = current.below();
-        if (SculverfishEntity.isFullSculkBlock(mob.level(), below)) return below;
+        if (isValidBurrowTarget(below)) return below;
 
         BlockPos above = current.above();
-        if (SculverfishEntity.isFullSculkBlock(mob.level(), above)) return above;
+        if (isValidBurrowTarget(above)) return above;
 
         // 同级相邻的一格，以及刚走下来那一层（斜下方一格，即脚边地面的幽匿块）
         for (Direction direction : Direction.Plane.HORIZONTAL) {
             BlockPos side = current.relative(direction);
-            if (SculverfishEntity.isFullSculkBlock(mob.level(), side)) return side;
+            if (isValidBurrowTarget(side)) return side;
 
             BlockPos sideBelow = side.below();
-            if (SculverfishEntity.isFullSculkBlock(mob.level(), sideBelow)) return sideBelow;
+            if (isValidBurrowTarget(sideBelow)) return sideBelow;
         }
 
         return null;
     }
 
-    /** 钻地目标是否仍然可钻：存在、是完整幽匿块，并且就在脚下或紧邻。 */
+    /**
+     * 钻地目标是否可钻：存在、是完整幽匿块、就在脚下或紧邻（不超过 {@value #MAX_TRANSITION_DISTANCE_SQR}
+     * 的平方根），并且这一格里还没有挤满同类（见 {@link SculverfishEntity#MAX_PER_BLOCK}）。
+     */
     private boolean isValidBurrowTarget(@Nullable BlockPos target) {
         if (target == null || !SculverfishEntity.isFullSculkBlock(mob.level(), target)) return false;
-        return mob.position().distanceToSqr(SculverfishEntity.burrowPos(target)) <= MAX_TRANSITION_DISTANCE_SQR;
+        if (mob.position().distanceToSqr(SculverfishEntity.burrowPos(target)) > MAX_TRANSITION_DISTANCE_SQR) return false;
+
+        return !SculverfishEntity.isBurrowBlockFull(mob.level(), target, mob);
+    }
+
+    /** 这一格能不能钻：完整幽匿块，而且还没有挤满同类。 */
+    private boolean isDiggableSculk(BlockPos pos) {
+        return SculverfishEntity.isFullSculkBlock(mob.level(), pos)
+                && !SculverfishEntity.isBurrowBlockFull(mob.level(), pos, mob);
+    }
+
+    /** 身体是不是正卡在方块里（碰撞箱与方块重叠）。切回 ACTIVE 之前必须确认它是 false，否则会开始窒息。 */
+    private boolean isEmbedded() {
+        return !mob.level().noBlockCollision(mob, mob.getBoundingBox());
     }
 
     /**
@@ -407,6 +468,7 @@ public class SculverfishBurrowGoal extends Goal {
         for (int radius = 1; radius <= ANCHOR_SEARCH_RADIUS; radius++) {
             int verticalLimit = Math.min(radius, ANCHOR_SEARCH_HEIGHT);
             BlockPos best = null;
+            BlockPos bestBlock = null;
             double bestDistance = Double.MAX_VALUE;
 
             for (int y = -verticalLimit; y <= verticalLimit; y++) {
@@ -416,43 +478,49 @@ public class SculverfishBurrowGoal extends Goal {
                         if (Math.max(Math.abs(x), Math.abs(z)) != radius) continue;
 
                         cursor.set(origin.getX() + x, origin.getY() + y, origin.getZ() + z);
-                        if (!isApproachStand(cursor)) continue;
+                        BlockPos sculk = findAdjacentSculkBlock(cursor);
+                        if (sculk == null) continue;
 
                         double distance = origin.distSqr(cursor);
                         if (distance < bestDistance) {
                             bestDistance = distance;
                             best = cursor.immutable();
+                            bestBlock = sculk.immutable();
                         }
                     }
                 }
             }
 
-            if (best != null) return best;
+            if (best != null) {
+                approachBlock = bestBlock;
+                return best;
+            }
         }
 
         return null;
     }
 
     /**
-     * 这一格能不能作为接近幽匿块的落脚点。
+     * 这一格能不能作为接近幽匿块的落脚点；能的话返回它准备钻进去的那块幽匿块。
      *
      * <p>判据与钻出、钻入保持一致：本身不能是实心方块（容得下它），下面必须是实心方块
      * （钻出来有地方站），上方可以不是；站上去之后，脚下、正上方、四邻或斜下方任意一处
-     * 是完整幽匿块就算能钻进去。
+     * 是完整幽匿块就算能钻进去。返回的方块同时用来让它在走过去时一直盯着目标。
      */
-    private boolean isApproachStand(BlockPos pos) {
-        if (SculverfishEntity.isSolidBlock(mob.level(), pos)) return false;
-        if (!SculverfishEntity.isSolidBlock(mob.level(), pos.below())) return false;
-        if (SculverfishEntity.isFullSculkBlock(mob.level(), pos.below())) return true;
-        if (SculverfishEntity.isFullSculkBlock(mob.level(), pos.above())) return true;
+    @Nullable
+    private BlockPos findAdjacentSculkBlock(BlockPos pos) {
+        if (SculverfishEntity.isSolidBlock(mob.level(), pos)) return null;
+        if (!SculverfishEntity.isSolidBlock(mob.level(), pos.below())) return null;
+        if (isDiggableSculk(pos.below())) return pos.below();
+        if (isDiggableSculk(pos.above())) return pos.above();
 
         for (Direction direction : Direction.Plane.HORIZONTAL) {
             BlockPos side = pos.relative(direction);
-            if (SculverfishEntity.isFullSculkBlock(mob.level(), side)) return true;
-            if (SculverfishEntity.isFullSculkBlock(mob.level(), side.below())) return true;
+            if (isDiggableSculk(side)) return side;
+            if (isDiggableSculk(side.below())) return side.below();
         }
 
-        return false;
+        return null;
     }
 
     /** 潜伏方块被破坏/替换时，如果上方有空间就当场钻出。 */
@@ -501,7 +569,8 @@ public class SculverfishBurrowGoal extends Goal {
             for (Direction direction : Direction.values()) {
                 BlockPos next = current.relative(direction);
                 if (next.equals(previous)) continue;
-                if (SculverfishEntity.isFullSculkBlock(mob.level(), next)) neighbors.add(next);
+                // 挤满同类的方块不作为换位落点，免得两只挤进同一格
+                if (isDiggableSculk(next)) neighbors.add(next);
             }
 
             if (neighbors.isEmpty()) break;
@@ -523,7 +592,8 @@ public class SculverfishBurrowGoal extends Goal {
         }
 
         BlockPos node = relocatePath.get(pathIndex);
-        if (!SculverfishEntity.isFullSculkBlock(mob.level(), node)) {
+        // 途中被别的同类占了就放弃这条路径，另找换位目标
+        if (!isDiggableSculk(node)) {
             relocatePath.clear();
             pathIndex = 0;
             relocateCooldown = 20;
