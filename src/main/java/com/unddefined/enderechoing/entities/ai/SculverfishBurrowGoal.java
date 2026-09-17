@@ -30,15 +30,20 @@ import java.util.List;
  * 交由 {@link net.minecraft.world.entity.monster.Silverfish} 体系保留的普通战斗 Goal 处理。
  * 在非幽匿方块上触发钻地时，它会用同样的标记接管移动，先走到附近最近的幽匿块再钻进去。
  *
- * <p>地下移动只经过 {@link SculverfishEntity#isFullSculkBlock} 认定的完整幽匿块，
- * 到达节点后再把该方块设为锚点并刷新限制范围，从而保证它不会长期离开幽匿区域。
+ * <p>地下移动只以 {@link SculverfishEntity#findRelocationTargets} 给出的完整幽匿块为落点，
+ * 到达节点后再把该方块设为锚点并刷新限制范围，从而保证它不会长期离开幽匿区域；
+ * 落点不要求和上一格相邻，中间隔着石头或空气也能换过去，所以不连续的幽匿区域同样可以移动。
+ *
+ * <p>接收到振动时（{@link SculverfishEntity#getVibrationSource()} 不为空）不做随机换位，改成沿着同样的
+ * 完整幽匿块朝振动源换位，因此追振动时也不会离开幽匿块；追到幽匿块内离振动源最近的一格，或者更近的几格
+ * 都被同类占住时清空振动源，结束本次调查。
  */
 public class SculverfishBurrowGoal extends Goal {
     /** 两次地下换位之间的间隔范围（tick）。 */
     private static final int MIN_RELOCATE_INTERVAL = 40;
     private static final int MAX_RELOCATE_INTERVAL = 100;
 
-    /** 一次地下随机游走的最大步数（格）。 */
+    /** 一次地下随机游走的最大步数（每步的落点见 {@link SculverfishEntity#findRelocationTargets}）。 */
     private static final int MAX_RELOCATE_STEPS = 5;
 
     /** 地下移动时每 tick 的速度（格）。 */
@@ -152,9 +157,8 @@ public class SculverfishBurrowGoal extends Goal {
         mob.getNavigation().stop();
 
         if (mob.getBurrowState() == BurrowState.ACTIVE) {
-            if (findBurrowDestination() != null) {
-                mob.setBurrowState(BurrowState.BURROWING);
-            } else if (mob.isBurrowReady()) {
+            if (findBurrowDestination() != null) mob.setBurrowState(BurrowState.BURROWING);
+            else if (mob.isBurrowReady()) {
                 // 脚下/紧邻没有幽匿块：先在附近搜一个能走过去的，走过去再钻
                 this.approachTarget = findApproachTarget();
                 this.approachTicks = 0;
@@ -237,9 +241,8 @@ public class SculverfishBurrowGoal extends Goal {
             relocateCooldown = 0;
         }
 
-        if (hideTicks > 0) {
-            hideTicks--;
-        } else {
+        if (hideTicks > 0) hideTicks--;
+        else {
             Player player = mob.findNearbyPlayer();
             if (player != null) {
                 Vec3 emergePos = mob.findEmergePos(anchor);
@@ -257,9 +260,34 @@ public class SculverfishBurrowGoal extends Goal {
             return;
         }
 
-        if (--relocateCooldown <= 0 && !buildRelocatePath(anchor)) {
-            relocateCooldown = 20;
+        // 接收到振动时不受随机换位冷却的限制，立刻沿着完整幽匿块朝振动源换位；撤退躲藏期间不追
+        if (hideTicks <= 0 && mob.getVibrationSource() != null) {
+            approachVibrationSource();
+            return;
         }
+
+        if (--relocateCooldown <= 0 && !buildRelocatePath(anchor)) relocateCooldown = 20;
+
+    }
+
+    /**
+     * 朝振动源换位一步：换位方向由 {@link SculverfishEntity#findSculkStepToward} 给出，只经过完整幽匿块，
+     * 所以不会离开幽匿块。
+     *
+     * <p>没有可以再靠近的幽匿块时结束本次调查：清空振动源，{@link InvestigateVibrationGoal} 随之结束，
+     * 之后回到随机换位。
+     */
+    private void approachVibrationSource() {
+        BlockPos source = mob.getVibrationSource();
+        BlockPos step = source != null ? mob.findSculkStepToward(source) : null;
+        if (step == null) {
+            mob.clearVibrationSource();
+            return;
+        }
+
+        Vec3 target = SculverfishEntity.burrowPos(step);
+        if (mob.position().distanceToSqr(target) < 0.04D) mob.setBurrowAnchor(step);
+        else moveTowards(target, BURROW_MOVE_SPEED);
     }
 
     private void tickEmerging() {
@@ -292,11 +320,9 @@ public class SculverfishBurrowGoal extends Goal {
                 mob.delayBurrow(BURROW_RETRY_DELAY_TICKS);
                 // 中止时如果身体已经进到方块里，不能直接切回 ACTIVE：那会开始吃窒息伤害。
                 // 先就地钻出去（成功时会自己切回 ACTIVE），钻不出去就先留在方块里（noPhysics 不会窒息）。
-                if (!isEmbedded()) {
-                    mob.setBurrowState(BurrowState.ACTIVE);
-                } else if (!tryEmergeFromCurrentBlock()) {
-                    mob.setBurrowState(BurrowState.BURROWED);
-                }
+                if (!isEmbedded()) mob.setBurrowState(BurrowState.ACTIVE);
+                else if (!tryEmergeFromCurrentBlock()) mob.setBurrowState(BurrowState.BURROWED);
+
                 return;
             }
         }
@@ -565,13 +591,10 @@ public class SculverfishBurrowGoal extends Goal {
         BlockPos previous = null;
 
         for (int i = 0; i < steps; i++) {
-            List<BlockPos> neighbors = new ArrayList<>(6);
-            for (Direction direction : Direction.values()) {
-                BlockPos next = current.relative(direction);
-                if (next.equals(previous)) continue;
-                // 挤满同类的方块不作为换位落点，免得两只挤进同一格
-                if (isDiggableSculk(next)) neighbors.add(next);
-            }
+            // 候选可以不相邻（见 SculverfishEntity#findRelocationTargets）：幽匿区域不连续时，
+            // 隔着石头或空气的另一格幽匿块也能作为换位落点
+            List<BlockPos> neighbors = new ArrayList<>(mob.findRelocationTargets(current));
+            if (previous != null) neighbors.remove(previous);
 
             if (neighbors.isEmpty()) break;
 

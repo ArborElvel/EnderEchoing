@@ -1,8 +1,11 @@
 package com.unddefined.enderechoing.entities;
 
+import com.unddefined.enderechoing.entities.ai.InvestigateVibrationGoal;
 import com.unddefined.enderechoing.entities.ai.SculverfishBurrowGoal;
+import com.unddefined.enderechoing.entities.ai.VibrationInvestigator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -26,6 +29,11 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.gameevent.DynamicGameEventListener;
+import net.minecraft.world.level.gameevent.EntityPositionSource;
+import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.level.gameevent.PositionSource;
+import net.minecraft.world.level.gameevent.vibrations.VibrationSystem;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -35,6 +43,10 @@ import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.BiConsumer;
+
 /**
  * 幽匿蠹虫（Sculverfish）。
  *
@@ -43,11 +55,12 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * 死亡时的幽匿绽放、基础掉落、次声波压制、攻击附带幽匿侵扰等）。
  *
  * <p>自己的行为：只生成在完整的幽匿系方块上，常态潜伏在幽匿块中并在相邻幽匿块之间移动；
+ * 接收到振动时朝振动源换位，落点只取幽匿块，因此不会离开幽匿块；换位不要求两块幽匿块相邻，
+ * 中间隔着石头或空气也能穿过去（见 {@link VibrationInvestigator}）；
  * 玩家进入 {@value #VIEW_RANGE} 格视野后钻出攻击，击中目标、目标丢失或地面停留超时后再钻回幽匿块，
  * 在幽匿块上受伤时同样优先钻地；这些反应共同形成打了就跑的游击循环。
- * 振动接收尚未实现。
  */
-public class SculverfishEntity extends Silverfish implements GeoEntity, SculkMob {
+public class SculverfishEntity extends Silverfish implements GeoEntity, SculkMob, VibrationSystem, VibrationInvestigator {
     /** 视觉/索敌范围（格），同时用于钻出判定和原版 {@link Attributes#FOLLOW_RANGE}。 */
     public static final double VIEW_RANGE = 3.0D;
 
@@ -57,11 +70,27 @@ public class SculverfishEntity extends Silverfish implements GeoEntity, SculkMob
     /** 同一格幽匿块里最多容纳的幽匿蠹虫数量；已经挤满的方块不会再被选作钻入目标。 */
     public static final int MAX_PER_BLOCK = 1;
 
+    /**
+     * 一次换位最多跨过的距离（格）。
+     *
+     * <p>幽匿区域常常是不连续的，中间隔着石头、空气；它本来就藏在方块里移动，直接穿过去即可，
+     * 所以换位不要求两块幽匿块相邻。这个值同时限制了一步最远跳到哪里，避免看起来像瞬移。
+     */
+    private static final int MAX_RELOCATE_STEP_RADIUS = 3;
+
     /** 地面上最长停留时间（tick），超过后强制钻回幽匿块，形成游击循环。 */
     private static final int MAX_SURFACE_TICKS = 60;
 
     /** 目标丢失后经过多少 tick 钻回地下。 */
     private static final int BURROW_AFTER_TARGET_LOST_TICKS = 20;
+
+    /** 振动接收半径（格），与原版幽匿感测体、幽匿骷髅一致。 */
+    private static final int VIBRATION_LISTENER_RADIUS = 8;
+
+    /**
+     * “距离过远”的倍数：振动源离自己超过视野范围的该倍数时不去调查。
+     */
+    private static final double FAR_VIBRATION_RANGE_FACTOR = 5.0D;
 
     private static final EntityDataAccessor<Integer> DATA_BURROW_STATE =
             SynchedEntityData.defineId(SculverfishEntity.class, EntityDataSerializers.INT);
@@ -80,14 +109,29 @@ public class SculverfishEntity extends Silverfish implements GeoEntity, SculkMob
         }
 
         private static BurrowState byName(String name) {
-            for (BurrowState state : STATES) {
-                if (state.name().equals(name)) return state;
-            }
+            for (BurrowState state : STATES) if (state.name().equals(name)) return state;
             return ACTIVE;
         }
     }
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    private final VibrationSystem.Data vibrationData = new VibrationSystem.Data();
+    private final VibrationSystem.User vibrationUser = new SculverfishVibrationUser();
+    private final DynamicGameEventListener<VibrationSystem.Listener> dynamicVibrationListener =
+            new DynamicGameEventListener<>(new VibrationSystem.Listener(this));
+
+    /**
+     * 待调查的振动源位置，没有待调查的振动时为 {@code null}。
+     *
+     * <p>由 {@link SculverfishVibrationUser#onReceiveVibration} 写入；之后 {@link SculverfishBurrowGoal}
+     * 在幽匿块里朝它换位，追到幽匿块内离它最近的一格（或者路被同类占住）时清空它，
+     * {@link InvestigateVibrationGoal} 随之结束本次调查。
+     */
+    @Nullable
+    private BlockPos vibrationSource;
+
+    /** 距离下一次可以接收振动还剩多少刻，见 {@link VibrationInvestigator#VIBRATION_RECEIVE_INTERVAL}。 */
+    private int vibrationReceiveCooldown;
 
     /** 当前潜伏的幽匿块；没有有效锚点时不会进入潜伏状态。 */
     @Nullable
@@ -135,6 +179,9 @@ public class SculverfishEntity extends Silverfish implements GeoEntity, SculkMob
         // 这两条都与“只居住在幽匿块中”冲突，这里显式建立自己的 Goal 列表。
         goalSelector.addGoal(0, new SculverfishBurrowGoal(this));
         goalSelector.addGoal(1, new FloatGoal(this));
+        // 接收到振动时朝振动源换位。潜伏时的地下移动仍然由 SculverfishBurrowGoal 执行，
+        // 所以这条 Goal 不占用任何控制标记，只负责调查的开始与结束。
+        goalSelector.addGoal(2, new InvestigateVibrationGoal<>(this));
         goalSelector.addGoal(4, new MeleeAttackGoal(this, 1.0D, false));
         targetSelector.addGoal(1, new HurtByTargetGoal(this));
         targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
@@ -152,6 +199,13 @@ public class SculverfishEntity extends Silverfish implements GeoEntity, SculkMob
         // 但必须知道“它现在埋在方块里”，否则自己的重力和方块碰撞会把它顶出来，和服务端位置互相拉扯。
         if (level().isClientSide) updateBurrowPhysics(getBurrowState());
         super.tick();
+
+        if (level() instanceof ServerLevel serverLevel) {
+            if (vibrationReceiveCooldown > 0) vibrationReceiveCooldown--;
+            VibrationSystem.Ticker.tick(serverLevel, vibrationData, vibrationUser);
+            // 已经锁定目标时不调查振动（正在追踪的目标优先），也避免振动源一直攒在手里
+            if (getTarget() != null) clearVibrationSource();
+        }
     }
 
     @Override
@@ -162,11 +216,8 @@ public class SculverfishEntity extends Silverfish implements GeoEntity, SculkMob
 
         if (!level().isClientSide && getBurrowState() == BurrowState.ACTIVE) {
             surfaceTicks++;
-            if (getTarget() == null) {
-                ticksWithoutTarget++;
-            } else {
-                ticksWithoutTarget = 0;
-            }
+            if (getTarget() == null) ticksWithoutTarget++;
+            else ticksWithoutTarget = 0;
         }
 
         // 阳光直射下获得虚弱与缓慢
@@ -340,6 +391,19 @@ public class SculverfishEntity extends Silverfish implements GeoEntity, SculkMob
         return getBurrowState() == BurrowState.BURROWED;
     }
 
+    /**
+     * 是否正藏在一格幽匿块里：只有潜伏、而且自己就在幽匿块内时才藏得住。
+     *
+     * <p>它换位时可以跨过不连续的幽匿区域（见 {@link #findRelocationTargets}），中间那几格并不是幽匿块，
+     * 这时它就露在外面，客户端不该把它藏起来。所以客户端判断“看不看得见”用的是这里，而不是
+     * {@link #isBurrowed()}；潜伏方块的幽匿块被挖掉时同理，它也会露出来。
+     *
+     * @return 藏在幽匿块里返回 {@code true}，否则返回 {@code false}
+     */
+    public boolean isHiddenInSculk() {
+        return isBurrowed() && isFullSculkBlock(level(), blockPosition());
+    }
+
     /** 当前潜伏锚点，没有有效锚点时返回 {@code null}。 */
     @Nullable
     public BlockPos getBurrowAnchor() {
@@ -413,6 +477,186 @@ public class SculverfishEntity extends Silverfish implements GeoEntity, SculkMob
         boolean requested = burrowRequested;
         this.burrowRequested = false;
         return requested;
+    }
+
+    /**
+     * 待调查的振动源位置，没有待调查的振动时返回 {@code null}，见 {@link VibrationInvestigator}。
+     *
+     * <p>{@link SculverfishBurrowGoal} 读取它来朝振动源换位。
+     */
+    @Override
+    @Nullable
+    public BlockPos getVibrationSource() {
+        return vibrationSource;
+    }
+
+    /**
+     * 结束本次调查，清空待调查的振动源。
+     *
+     * <p>清空后 {@link SculverfishBurrowGoal} 立刻回到随机换位，{@link InvestigateVibrationGoal} 也随之结束。
+     */
+    @Override
+    public void clearVibrationSource() {
+        vibrationSource = null;
+    }
+
+    /**
+     * 开始朝振动源换位：只有潜伏在幽匿块里时才会为了振动换位。
+     *
+     * <p>钻出、钻回和地面活动期间都返回 {@code false}——振动不会让它离开幽匿块；换位本身由
+     * {@link SculverfishBurrowGoal} 执行。
+     */
+    @Override
+    public boolean beginVibrationInvestigation(BlockPos source) {
+        return isBurrowed();
+    }
+
+    /**
+     * 潜伏在幽匿块里时就还在朝振动源靠近（换位由 {@link SculverfishBurrowGoal} 执行），
+     * 钻出地面后本次调查结束。
+     */
+    @Override
+    public boolean isApproachingVibrationSource() {
+        return isBurrowed();
+    }
+
+    /**
+     * 从 from 出发、一次换位能够到达的幽匿块：以 from 为中心、半径 {@value #MAX_RELOCATE_STEP_RADIUS} 格以内的
+     * 完整幽匿块，不含 from 自己和已经挤满同类的方块。
+     *
+     * <p>不要求两块幽匿块相邻：幽匿区域常常是不连续的，它本来就藏在方块里移动，
+     * 中间隔着的石头或空气直接穿过去即可。
+     *
+     * @param from 换位的起点，一般是当前潜伏锚点
+     * @return 可以换位过去的幽匿块，没有时返回空列表
+     */
+    public List<BlockPos> findRelocationTargets(BlockPos from) {
+        List<BlockPos> targets = new ArrayList<>();
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        double maxDistanceSqr = MAX_RELOCATE_STEP_RADIUS * MAX_RELOCATE_STEP_RADIUS;
+
+        for (int y = -MAX_RELOCATE_STEP_RADIUS; y <= MAX_RELOCATE_STEP_RADIUS; y++) {
+            for (int x = -MAX_RELOCATE_STEP_RADIUS; x <= MAX_RELOCATE_STEP_RADIUS; x++) {
+                for (int z = -MAX_RELOCATE_STEP_RADIUS; z <= MAX_RELOCATE_STEP_RADIUS; z++) {
+                    cursor.set(from.getX() + x, from.getY() + y, from.getZ() + z);
+                    if (cursor.equals(from)) continue;
+                    if (from.distSqr(cursor) > maxDistanceSqr) continue;
+                    if (!isFullSculkBlock(level(), cursor)) continue;
+                    if (isBurrowBlockFull(level(), cursor, this)) continue;
+
+                    targets.add(cursor.immutable());
+                }
+            }
+        }
+
+        return targets;
+    }
+
+    /**
+     * 朝 target 换位的下一格：在 {@link #findRelocationTargets} 给出的候选中挑一格离 target 最近的幽匿块。
+     *
+     * <p>候选全部是完整幽匿块，而且允许不相邻，所以幽匿蠹虫追振动时既不会离开幽匿块，也能跨过不连续的
+     * 幽匿区域；没有比当前锚点更靠近 target 的候选时返回 {@code null}，表示不再靠近。
+     *
+     * @param target 要靠近的方块
+     * @return 下一步换位的幽匿块，没有可以再靠近的幽匿块时返回 {@code null}
+     */
+    @Nullable
+    public BlockPos findSculkStepToward(BlockPos target) {
+        BlockPos anchor = burrowAnchor;
+        if (anchor == null) return null;
+
+        BlockPos step = null;
+        double stepDistance = anchor.distSqr(target);
+        for (BlockPos candidate : findRelocationTargets(anchor)) {
+            double distance = candidate.distSqr(target);
+            if (distance < stepDistance) {
+                stepDistance = distance;
+                step = candidate;
+            }
+        }
+
+        return step;
+    }
+
+    @Override
+    public void updateDynamicGameEventListener(BiConsumer<DynamicGameEventListener<?>, ServerLevel> listenerConsumer) {
+        if (level() instanceof ServerLevel serverLevel) listenerConsumer.accept(dynamicVibrationListener, serverLevel);
+    }
+
+    @Override
+    public VibrationSystem.Data getVibrationData() {
+        return vibrationData;
+    }
+
+    @Override
+    public VibrationSystem.User getVibrationUser() {
+        return vibrationUser;
+    }
+
+    /** 视野距离（格），即钻出判定用的距离属性 {@link Attributes#FOLLOW_RANGE}，用于判断振动源是否“距离过远”。 */
+    private double getViewRange() {
+        return getAttributeValue(Attributes.FOLLOW_RANGE);
+    }
+
+    /**
+     * “距离过远”的判定阈值（格）：振动源离自己超过视野范围的 {@value #FAR_VIBRATION_RANGE_FACTOR} 倍就不去调查。
+     *
+     * <p>与振动接收范围无关，接收范围固定 {@value #VIBRATION_LISTENER_RADIUS} 格；这个阈值判断的是
+     * 振动源本身离自己有多远，见 {@link SculverfishVibrationUser#onReceiveVibration}。
+     */
+    private double getMaxInvestigateDistance() {
+        return getViewRange() * FAR_VIBRATION_RANGE_FACTOR;
+    }
+
+    /**
+     * 幽匿蠹虫自己的振动接收者，与原版监守者、幽匿骷髅同构。
+     *
+     * <p>接收半径为 {@value #VIBRATION_LISTENER_RADIUS} 格；收到振动时先看振动源离自己多远，超过视野范围的
+     * {@value #FAR_VIBRATION_RANGE_FACTOR} 倍（见 {@link #getMaxInvestigateDistance()}）就不去，否则记下振动源的位置，
+     * 怎么靠过去交给 {@link InvestigateVibrationGoal} 与潜伏时的 {@link SculverfishBurrowGoal}。正在调查上一次
+     * 振动时不再接收新的振动、两次接收之间也要隔
+     * {@link VibrationInvestigator#VIBRATION_RECEIVE_INTERVAL} 刻，避免换位换到一半反复改目标。
+     *
+     * <p>与幽匿僵尸不同，这里不转发振动、也不激活幽匿共鸣方块，因此不需要覆盖
+     * {@link Entity#dampensVibrations()}，自身发出的振动依旧被抑制。
+     */
+    private class SculverfishVibrationUser implements VibrationSystem.User {
+        private final PositionSource positionSource =
+                new EntityPositionSource(SculverfishEntity.this, SculverfishEntity.this.getEyeHeight());
+
+        @Override
+        public int getListenerRadius() {
+            return VIBRATION_LISTENER_RADIUS;
+        }
+
+        @Override
+        public PositionSource getPositionSource() {
+            return positionSource;
+        }
+
+        @Override
+        public boolean canReceiveVibration(ServerLevel level, BlockPos pos, Holder<GameEvent> gameEvent,
+                                           GameEvent.Context context) {
+            // 正在调查上一次振动、或者上一次接收之后还没过接收间隔时，不再接收新的振动
+            return !isNoAi() && isAlive() && vibrationSource == null && vibrationReceiveCooldown <= 0;
+        }
+
+        @Override
+        public void onReceiveVibration(ServerLevel level, BlockPos pos, Holder<GameEvent> gameEvent,
+                                       @Nullable Entity entity, @Nullable Entity projectileOwner, float distance) {
+            // 振动源：有来源实体时用它的位置（优先投射物的发射者），否则用振动发生的位置
+            Entity source = projectileOwner != null ? projectileOwner : entity;
+            Vec3 sourcePos = source != null ? source.position() : Vec3.atCenterOf(pos);
+
+            // 距离过远（超过 getMaxInvestigateDistance()）就不换位。这里判断的是振动源与自己的距离，
+            // 而不是接口传进来的 distance：那是振动发生位置到自己的距离，来源本身可能远得多。
+            double maxDistance = getMaxInvestigateDistance();
+            if (distanceToSqr(sourcePos) > maxDistance * maxDistance) return;
+
+            vibrationSource = BlockPos.containing(sourcePos);
+            vibrationReceiveCooldown = VIBRATION_RECEIVE_INTERVAL;
+        }
     }
 
     /** 潜伏位置 {@value #VIEW_RANGE} 格内的候选玩家：存活、非创造、非旁观者。 */

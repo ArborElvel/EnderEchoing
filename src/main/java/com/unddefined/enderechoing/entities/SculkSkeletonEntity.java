@@ -1,6 +1,7 @@
 package com.unddefined.enderechoing.entities;
 
 import com.unddefined.enderechoing.entities.ai.InvestigateVibrationGoal;
+import com.unddefined.enderechoing.entities.ai.VibrationInvestigator;
 import com.unddefined.enderechoing.server.registry.MobEffectRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -12,6 +13,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.Goal.Flag;
 import net.minecraft.world.entity.monster.Skeleton;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
@@ -30,7 +32,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.function.BiConsumer;
 
-public class SculkSkeletonEntity extends Skeleton implements GeoEntity, SculkMob, VibrationSystem {
+public class SculkSkeletonEntity extends Skeleton implements GeoEntity, SculkMob, VibrationSystem, VibrationInvestigator {
     /** 振动接收半径（格），与原版幽匿感测体、幽匿僵尸一致。 */
     private static final int VIBRATION_LISTENER_RADIUS = 8;
 
@@ -38,6 +40,9 @@ public class SculkSkeletonEntity extends Skeleton implements GeoEntity, SculkMob
      * “距离过远”的倍数：振动源离自己超过视野范围的该倍数时不去调查。
      */
     private static final double FAR_VIBRATION_RANGE_FACTOR = 2.0D;
+
+    /** 调查振动时的移动速度倍率，与原版游荡 Goal 的 {@code WaterAvoidingRandomStrollGoal(this, 1.0F)} 一致。 */
+    private static final double INVESTIGATE_SPEED_MODIFIER = 1.0D;
 
     /** 击中生物时施加失明与失聪的持续时间，单位为游戏刻（tick），即 3 秒。 */
     public static final int HIT_DEBUFF_DURATION = 60;
@@ -57,6 +62,9 @@ public class SculkSkeletonEntity extends Skeleton implements GeoEntity, SculkMob
     @Nullable
     private BlockPos vibrationSource;
 
+    /** 距离下一次可以接收振动还剩多少刻，见 {@link VibrationInvestigator#VIBRATION_RECEIVE_INTERVAL}。 */
+    private int vibrationReceiveCooldown;
+
     /** 幽匿系方块上的回血剩余计时（tick），见 {@link SculkMob#tickSculkRegeneration(int)}。 */
     private int sculkHealCooldown;
 
@@ -73,7 +81,7 @@ public class SculkSkeletonEntity extends Skeleton implements GeoEntity, SculkMob
         super.registerGoals();
         // 接收到振动时先走向振动源：优先级高于游荡 Goal，且只在没有攻击目标时生效，
         // 因此锁定目标后仍由 Skeleton 自己的弓 Goal 负责战斗
-        goalSelector.addGoal(4, new InvestigateVibrationGoal(this));
+        goalSelector.addGoal(4, new InvestigateVibrationGoal<>(this, Flag.MOVE));
     }
 
     @Override
@@ -88,6 +96,7 @@ public class SculkSkeletonEntity extends Skeleton implements GeoEntity, SculkMob
     public void tick() {
         super.tick();
         if (level() instanceof ServerLevel serverLevel) {
+            if (vibrationReceiveCooldown > 0) vibrationReceiveCooldown--;
             VibrationSystem.Ticker.tick(serverLevel, vibrationData, vibrationUser);
             // 已经锁定目标时不调查振动（正在追踪的目标优先），也避免振动源一直攒在手里
             if (getTarget() != null) clearVibrationSource();
@@ -110,12 +119,14 @@ public class SculkSkeletonEntity extends Skeleton implements GeoEntity, SculkMob
     }
 
     /** 当前待调查的振动源位置，没有待调查的振动时返回 {@code null}。 */
+    @Override
     @Nullable
     public BlockPos getVibrationSource() {
         return vibrationSource;
     }
 
     /** 结束调查，清空待调查的振动源，见 {@link InvestigateVibrationGoal}。 */
+    @Override
     public void clearVibrationSource() {
         vibrationSource = null;
     }
@@ -156,6 +167,31 @@ public class SculkSkeletonEntity extends Skeleton implements GeoEntity, SculkMob
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this)).getType() == HitResult.Type.MISS;
     }
 
+    /**
+     * 开始朝振动源寻路，见 {@link VibrationInvestigator#beginVibrationInvestigation(BlockPos)}。
+     *
+     * <p>振动源已经进入视野范围就不用特意过去，没有可行路径时也不去，两种情况都放弃本次调查。
+     */
+    @Override
+    public boolean beginVibrationInvestigation(BlockPos source) {
+        if (isVibrationSourceVisible()) return false;
+
+        return getNavigation().moveTo(source.getX() + 0.5D, source.getY(), source.getZ() + 0.5D,
+                INVESTIGATE_SPEED_MODIFIER);
+    }
+
+    /** 振动源还没进入视野、寻路也还没走完时继续调查，见 {@link VibrationInvestigator}。 */
+    @Override
+    public boolean isApproachingVibrationSource() {
+        return !isVibrationSourceVisible() && !getNavigation().isDone();
+    }
+
+    /** 结束调查时停下寻路。 */
+    @Override
+    public void stopVibrationInvestigation() {
+        getNavigation().stop();
+    }
+
     /** 被阳光直射时只获得虚弱与缓慢，不像普通骷髅那样燃烧。 */
     @Override
     protected boolean isSunBurnTick() {
@@ -182,7 +218,8 @@ public class SculkSkeletonEntity extends Skeleton implements GeoEntity, SculkMob
      *
      * <p>接收半径为 {@value #VIBRATION_LISTENER_RADIUS} 格；收到振动时先看振动源离自己多远，
      * 超过两倍视野范围（见 {@link #getMaxInvestigateDistance()}）就不去，否则记录振动源位置，
-     * 是否走过去交给 {@link InvestigateVibrationGoal}；正在调查上一次振动时不再接收新的振动。
+     * 是否走过去交给 {@link InvestigateVibrationGoal}；正在调查上一次振动时不再接收新的振动，
+     * 两次接收之间也要隔 {@link VibrationInvestigator#VIBRATION_RECEIVE_INTERVAL} 刻。
      *
      * 与幽匿僵尸不同，这里不转发振动、也不激活幽匿共鸣方块，因此不需要覆盖
      * {@link Entity#dampensVibrations()}，自身发出的振动依旧被抑制。
@@ -204,8 +241,8 @@ public class SculkSkeletonEntity extends Skeleton implements GeoEntity, SculkMob
         @Override
         public boolean canReceiveVibration(ServerLevel level, BlockPos pos, Holder<GameEvent> gameEvent,
                                            GameEvent.Context context) {
-            // 正在调查上一次振动时不再接收新的振动，避免走到一半反复改目标
-            return !isNoAi() && isAlive() && vibrationSource == null;
+            // 正在调查上一次振动、或者上一次接收之后还没过接收间隔时，不再接收新的振动
+            return !isNoAi() && isAlive() && vibrationSource == null && vibrationReceiveCooldown <= 0;
         }
 
         @Override
@@ -221,6 +258,7 @@ public class SculkSkeletonEntity extends Skeleton implements GeoEntity, SculkMob
             if (distanceToSqr(sourcePos) > maxDistance * maxDistance) return;
 
             vibrationSource = BlockPos.containing(sourcePos);
+            vibrationReceiveCooldown = VIBRATION_RECEIVE_INTERVAL;
         }
     }
 
