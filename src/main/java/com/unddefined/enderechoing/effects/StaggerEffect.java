@@ -8,10 +8,15 @@ import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.player.Player;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 
+import static com.unddefined.enderechoing.server.registry.MobEffectRegistry.STAGGER;
 import static net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED;
 
-
+@EventBusSubscriber(modid = EnderEchoing.MODID)
 public class StaggerEffect extends MobEffect {
     //踉跄
     public StaggerEffect() {
@@ -56,9 +61,28 @@ public class StaggerEffect extends MobEffect {
 
     @Override
     public boolean shouldApplyEffectTickThisTick(int duration, int amplifier) {
-
         return duration % 20 == 0;
     }
 
+    @SubscribeEvent
+    public static void onMovementInput(MovementInputUpdateEvent event) {
+        Player player = event.getEntity();
+        if (player.hasEffect(STAGGER)) {
+            // 获取当前移动输入
+            var movement = event.getInput();
+
+            // 获取效果等级（用于确定偏移程度）
+            int amplifier = player.getEffect(STAGGER).getAmplifier();
+
+            // 随机偏移移动方向
+            RandomSource random = player.getRandom();
+            float offsetStrength = 0.1f * (amplifier + 1); // 等级越高偏移越严重
+
+            // 添加随机偏移
+            movement.forwardImpulse += (random.nextFloat() - 0.5f) * offsetStrength;
+            movement.leftImpulse += (random.nextFloat() - 0.5f) * offsetStrength;
+        }
+
+    }
 
 }

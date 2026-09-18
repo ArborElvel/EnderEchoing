@@ -23,9 +23,8 @@ public class SculkIntrusionEffect extends MobEffect {
     }
     @Override
     public boolean applyEffectTick(LivingEntity entity, int pAmplifier) {
-        if (entity.level() instanceof ServerLevel serverLevel) {
-            entity.getData(DataRegistry.SCULK_SPREADER).serverTick(serverLevel, entity);
-        }
+        if (entity.level() instanceof ServerLevel S) entity.getData(DataRegistry.SCULK_SPREADER).serverTick(S, entity);
+
         return true;
     }
 }

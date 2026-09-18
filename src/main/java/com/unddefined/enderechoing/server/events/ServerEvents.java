@@ -27,7 +27,6 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.EnderMan;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.monster.warden.Warden;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.Potions;
@@ -39,7 +38,6 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.neoforged.neoforge.event.VanillaGameEvent;
 import net.neoforged.neoforge.event.brewing.RegisterBrewingRecipesEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
@@ -117,13 +115,17 @@ public class ServerEvents {
 
     }
 
-    /** 幽匿生物死亡时，按概率在死亡位置原地绽放一次幽匿催发体效果 */
+    /**
+     * 幽匿生物死亡时，按概率在死亡位置原地绽放一次幽匿催发体效果
+     */
     @SubscribeEvent
     public static void onSculkMobDeath(LivingDeathEvent event) {
         if (event.getEntity() instanceof SculkMob sculkMob) sculkMob.triggerSculkBloomOnDeath();
     }
 
-    /** 幽匿生物的基础掉落（echo_shard、sculk_matter 等），抢夺附魔只提高掉落率 */
+    /**
+     * 幽匿生物的基础掉落（echo_shard、sculk_matter 等），抢夺附魔只提高掉落率
+     */
     @SubscribeEvent
     public static void onSculkMobDrops(LivingDropsEvent event) {
         if (!(event.getEntity() instanceof SculkMob sculkMob)) return;
@@ -133,7 +135,9 @@ public class ServerEvents {
         sculkMob.dropSculkMobLoot(level, event.getSource(), event.getDrops());
     }
 
-    /** 次声波苦力怕自爆时不做物理爆炸，改为发出次声波 */
+    /**
+     * 次声波苦力怕自爆时不做物理爆炸，改为发出次声波
+     */
     @SubscribeEvent
     public static void onCreesperExplosion(ExplosionEvent.Start event) {
         if (!(event.getExplosion().getDirectSourceEntity() instanceof CreesperEntity creesper)) return;
@@ -141,7 +145,9 @@ public class ServerEvents {
         event.setCanceled(true);
     }
 
-    /** 破坏幽匿系方块时按概率掉落一个幽匿物质，概率受时运影响。 */
+    /**
+     * 破坏幽匿系方块时按概率掉落一个幽匿物质，概率受时运影响。
+     */
     @SubscribeEvent
     public static void onSculkBlockDrops(BlockDropsEvent event) {
         if (!event.getState().is(SCULK_BLOCKS)) return;
@@ -159,13 +165,17 @@ public class ServerEvents {
         event.getDrops().add(drop);
     }
 
-    /** 驱动尚未结束的幽匿绽放 */
+    /**
+     * 驱动尚未结束的幽匿绽放
+     */
     @SubscribeEvent
     public static void onLevelTick(LevelTickEvent.Post event) {
         if (event.getLevel() instanceof ServerLevel level) SculkBloom.serverTick(level);
     }
 
-    /** 维度卸载时丢弃其上未完成的幽匿绽放 */
+    /**
+     * 维度卸载时丢弃其上未完成的幽匿绽放
+     */
     @SubscribeEvent
     public static void onLevelUnload(LevelEvent.Unload event) {
         if (event.getLevel() instanceof ServerLevel level) SculkBloom.discard(level);
@@ -262,40 +272,33 @@ public class ServerEvents {
     @SubscribeEvent
     public static void onExpireEffect(MobEffectEvent.Expired event) {
         var E = event.getEntity();
-        if (!E.hasEffect(SCULK_INTRUSION)) E.getData(SCULK_SPREADER).clear();
-
-        if (!E.hasEffect(TINNITUS) && E.getAttribute(FOLLOW_RANGE) != null) {
-            if (E instanceof Monster monster) monster.getAttribute(FOLLOW_RANGE).removeModifier(tinnitus_modifier_id);
-        }
-        if (!E.hasEffect(STAGGER) && E.getAttribute(MOVEMENT_SPEED) != null) {
-            E.getAttribute(MOVEMENT_SPEED).removeModifier(stagger_modifier_id);
-        }
-        if (!E.hasEffect(ATTACK_SCATTERED) && E.getAttribute(ATTACK_SPEED) != null) {
-            E.getAttribute(ATTACK_SPEED).removeModifier(attack_scattered_modifier_id);
-        }
-        if (!E.hasEffect(SCULK_VEIL)) E.addEffect(new MobEffectInstance(GLOWING, SCULK_VEIL_GLOWING_DURATION.get() * 20));
+        var EF = event.getEffectInstance();
+        if (EF == null) return;
+        clearEffect(EF, E);
+        if (EF.is(SCULK_VEIL)) E.addEffect(new MobEffectInstance(GLOWING, SCULK_VEIL_GLOWING_DURATION.get() * 20));
 
     }
 
-    @SubscribeEvent
-    public static void onMovementInput(MovementInputUpdateEvent event) {
-        Player player = event.getEntity();
-        if (player.hasEffect(STAGGER)) {
-            // 获取当前移动输入
-            var movement = event.getInput();
+    private static void clearEffect(MobEffectInstance EF, LivingEntity E) {
+        if (EF.is(SCULK_INTRUSION)) E.getData(SCULK_SPREADER).clear();
 
-            // 获取效果等级（用于确定偏移程度）
-            int amplifier = player.getEffect(STAGGER).getAmplifier();
-
-            // 随机偏移移动方向
-            RandomSource random = player.getRandom();
-            float offsetStrength = 0.1f * (amplifier + 1); // 等级越高偏移越严重
-
-            // 添加随机偏移
-            movement.forwardImpulse += (random.nextFloat() - 0.5f) * offsetStrength;
-            movement.leftImpulse += (random.nextFloat() - 0.5f) * offsetStrength;
+        if (EF.is(TINNITUS) && E.getAttribute(FOLLOW_RANGE) != null) {
+            if (E instanceof Monster monster) monster.getAttribute(FOLLOW_RANGE).removeModifier(tinnitus_modifier_id);
         }
+        if (EF.is(STAGGER) && E.getAttribute(MOVEMENT_SPEED) != null) {
+            E.getAttribute(MOVEMENT_SPEED).removeModifier(stagger_modifier_id);
+        }
+        if (EF.is(ATTACK_SCATTERED) && E.getAttribute(ATTACK_SPEED) != null) {
+            E.getAttribute(ATTACK_SPEED).removeModifier(attack_scattered_modifier_id);
+        }
+    }
 
+    @SubscribeEvent
+    public static void onRemoveEffect(MobEffectEvent.Remove event) {
+        var E = event.getEntity();
+        var EF = event.getEffectInstance();
+        if (EF == null) return;
+        clearEffect(EF, E);
     }
 
     @SubscribeEvent
