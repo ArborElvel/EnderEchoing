@@ -9,6 +9,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
@@ -65,6 +66,15 @@ public class SculverfishBurrowGoal extends Goal {
     /** 侧面碎屑：每个面的粒子数量，以及为了让碎屑露在方块外而沿面法线往外偏的距离（格）。 */
     private static final int DIG_SIDE_PARTICLE_COUNT = 6;
     private static final double DIG_SIDE_OFFSET = 0.02D;
+
+    /**
+     * 在方块里移动时漏出碎屑的概率（每刻 1/N）、每次每个面的粒子数量与散布（格）。
+     *
+     * <p>数量刻意压得很低：它是给玩家“幽匿在动”的提示，而不是把它的位置直接标出来。
+     */
+    private static final int MOVE_PARTICLE_CHANCE = 4;
+    private static final int MOVE_PARTICLE_COUNT = 1;
+    private static final double MOVE_PARTICLE_SPREAD = 0.25D;
 
     /**
      * 钻入允许的最大位移（格）的平方。
@@ -642,9 +652,32 @@ public class SculverfishBurrowGoal extends Goal {
         Vec3 delta = target.subtract(mob.position());
         if (delta.lengthSqr() < 1.0E-6D) return;
 
-        mob.getLookControl().setLookAt(target);
+        faceTravelDirection(delta);
         mob.move(MoverType.SELF, delta.normalize().scale(speed));
         mob.setDeltaMovement(Vec3.ZERO);
+
+        // 地面活动（走过去钻）是走路，不是钻地，不冒碎屑
+        if (mob.getBurrowState() != BurrowState.ACTIVE) playMovingParticles();
+    }
+
+    /**
+     * 按水平行进方向转身，并把头摆到身体正前方、俯仰归零。
+     *
+     * <p>这里不把目标交给 LookControl：在方块里换位时目标经常在正上或正下（水平偏移为 0），
+     * 那样算出来的朝向是任意的，而且只会把头扭过去、身体不动——CEM 公式按「头相对身体的偏航」
+     * 摆动整条身体，看起来就是身体歪的。所以改成让身体朝着行进方向转（每刻最多 90°，与原版
+     * MoveControl 一致），头与身体同向、俯仰归零。
+     *
+     * <p>正上/正下移动没有水平分量，这时保持原朝向，只把头摆正。
+     */
+    private void faceTravelDirection(Vec3 delta) {
+        if (delta.x * delta.x + delta.z * delta.z > 1.0E-6D) {
+            float yaw = (float) (Mth.atan2(delta.z, delta.x) * 180.0D / Math.PI) - 90.0F;
+            mob.setYRot(Mth.approachDegrees(mob.getYRot(), yaw, 90.0F));
+        }
+
+        mob.setYHeadRot(mob.getYRot());
+        mob.setXRot(0.0F);
     }
 
     private int nextRelocateCooldown() {
@@ -678,5 +711,48 @@ public class SculverfishBurrowGoal extends Goal {
         serverLevel.playSound(null, pos,
                 emerging ? SoundEvents.SCULK_BLOCK_BREAK : SoundEvents.SCULK_BLOCK_PLACE,
                 SoundSource.BLOCKS, 0.45F, 0.8F + mob.getRandom().nextFloat() * 0.4F);
+    }
+
+    /**
+     * 在方块里换位时偶尔从方块表面漏出一点碎屑，让玩家看得出地下有东西在动。
+     *
+     * <p>它整只都在方块里，所以碎屑要落在方块表面才看得见（方块内部的粒子会被方块挡住）：
+     * 每次在顶面与随机两个侧面各放 {@value #MOVE_PARTICLE_COUNT} 粒，且每刻只有
+     * 1/{@value #MOVE_PARTICLE_CHANCE} 的概率触发，效果是零星的剥落而不是一路喷粒子。
+     * 当前方块没有可见模型（例如它正好跨在空气里）时什么也不放。
+     */
+    private void playMovingParticles() {
+        if (!(mob.level() instanceof ServerLevel serverLevel)) return;
+        if (mob.getRandom().nextInt(MOVE_PARTICLE_CHANCE) != 0) return;
+
+        BlockPos pos = mob.blockPosition();
+        BlockState state = serverLevel.getBlockState(pos);
+        if (state.getRenderShape() == RenderShape.INVISIBLE) return;
+
+        BlockParticleOption debris = new BlockParticleOption(ParticleTypes.BLOCK, state);
+
+        // 顶面：碎屑从它上方那一面冒出来
+        serverLevel.sendParticles(debris,
+                pos.getX() + 0.5D, pos.getY() + 1.0D, pos.getZ() + 0.5D,
+                MOVE_PARTICLE_COUNT, MOVE_PARTICLE_SPREAD, 0.0D, MOVE_PARTICLE_SPREAD, 0.0D);
+
+        // 随机两个不同的侧面：碎屑贴在面外侧，和钻出/钻入的表现保持同一套位置
+        Direction first = Direction.Plane.HORIZONTAL.getRandomDirection(mob.getRandom());
+        Direction second = Direction.Plane.HORIZONTAL.getRandomDirection(mob.getRandom());
+        while (second == first) second = Direction.Plane.HORIZONTAL.getRandomDirection(mob.getRandom());
+
+        spawnSideDebris(serverLevel, debris, pos, first);
+        spawnSideDebris(serverLevel, debris, pos, second);
+    }
+
+    /** 在指定侧面的外侧放一份碎屑。 */
+    private void spawnSideDebris(ServerLevel level, BlockParticleOption debris, BlockPos pos, Direction side) {
+        level.sendParticles(debris,
+                pos.getX() + 0.5D + side.getStepX() * (0.5D + DIG_SIDE_OFFSET),
+                pos.getY() + 0.5D,
+                pos.getZ() + 0.5D + side.getStepZ() * (0.5D + DIG_SIDE_OFFSET),
+                MOVE_PARTICLE_COUNT,
+                side.getStepX() == 0 ? MOVE_PARTICLE_SPREAD : 0.0D, MOVE_PARTICLE_SPREAD,
+                side.getStepZ() == 0 ? MOVE_PARTICLE_SPREAD : 0.0D, 0.0D);
     }
 }
