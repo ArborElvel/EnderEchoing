@@ -2,6 +2,7 @@ package com.unddefined.enderechoing.blocks;
 
 import com.unddefined.enderechoing.blocks.entity.EnderEchoCrystalBlockEntity;
 import com.unddefined.enderechoing.blocks.entity.EnderEchoTunerBlockEntity;
+import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
 import com.unddefined.enderechoing.entities.EnderEchoCrystalEntity;
 import com.unddefined.enderechoing.network.packet.SendMarkedPositionNamesPacket;
 import com.unddefined.enderechoing.network.packet.SendSyncedTeleporterPositionsPacket;
@@ -105,7 +106,8 @@ public class EnderEchoCrystalBlock extends Block implements EntityBlock {
 
     @Override
     public List<ItemStack> getDrops(BlockState state, LootParams.Builder builder) {
-        return List.of(new ItemStack(ItemRegistry.ENDER_ECHO_CRYSTAL.get()), new ItemStack(ItemRegistry.CALIBRATED_SCULK_SHRIEKER_ITEM.get()));
+        return List.of(new ItemStack(ItemRegistry.ENDER_ECHO_CRYSTAL.get()),
+                new ItemStack(SculkBorneBridge.calibratedShriekerItem()));
     }
 
     @Override

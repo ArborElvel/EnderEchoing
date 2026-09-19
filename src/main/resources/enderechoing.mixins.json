@@ -3,22 +3,11 @@
   "package": "com.unddefined.enderechoing.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "CatalystListenerMixin",
     "EndCrystalMixin",
     "EnderManMixin",
-    "EntityMixin",
-    "FlyTowardsPositionParticleMixin",
-    "FogDataAccessor",
-    "MixinPlayerRenderer",
-    "SculkBlockMixin",
-    "SculkPatchFeatureMixin",
-    "WardenMixin"
+    "EntityMixin"
   ],
-  "client": [
-    "EndCrystalRendererMixin",
-    "FogRendererMixin",
-    "IrisDarknessFactorMixin"
-  ],
+  "client": ["EndCrystalRendererMixin", "FlyTowardsPositionParticleMixin", "FogDataAccessor", "FogRendererMixin", "IrisDarknessFactorMixin"],
   "server": [
   ],
   "injectors": {

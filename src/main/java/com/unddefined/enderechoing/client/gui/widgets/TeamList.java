@@ -2,6 +2,7 @@ package com.unddefined.enderechoing.client.gui.widgets;
 
 import com.unddefined.enderechoing.client.gui.TunerMenu;
 import com.unddefined.enderechoing.client.gui.screen.TunerScreen;
+import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
 import com.unddefined.enderechoing.network.packet.AddEffectPacket;
 import com.unddefined.enderechoing.network.packet.RemoveTeamMemberPacket;
 import com.unddefined.enderechoing.network.packet.TeleportRequestPacket;
@@ -26,7 +27,6 @@ import java.util.List;
 
 import static com.unddefined.enderechoing.server.registry.DataRegistry.ENTITY;
 import static com.unddefined.enderechoing.server.registry.ItemRegistry.ENDER_ECHOING_PEARL;
-import static com.unddefined.enderechoing.server.registry.MobEffectRegistry.SCULK_VEIL;
 import static net.minecraft.core.component.DataComponents.CUSTOM_NAME;
 
 public class TeamList extends ContainerObjectSelectionList<TeamList.MemberEntry> {
@@ -167,7 +167,7 @@ public class TeamList extends ContainerObjectSelectionList<TeamList.MemberEntry>
                 parent.screen.waypointList.selectedPosition = null;
                 var M = new MarkedPositionsManager.MarkedPositions(member.dimension(), member.blockPos(), member.playerName(), 0, false);
                 parent.screen.getMenu().setSelectedPosition(M);
-                PacketDistributor.sendToServer(new AddEffectPacket(SCULK_VEIL, 3 * 20, member.uuid()));
+                PacketDistributor.sendToServer(new AddEffectPacket(SculkBorneBridge.veilEffect(), 3 * 20, member.uuid()));
             }
             return true;
         }

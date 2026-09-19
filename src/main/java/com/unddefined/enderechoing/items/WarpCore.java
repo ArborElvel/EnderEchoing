@@ -4,6 +4,7 @@ import com.unddefined.enderechoing.blocks.entity.EnderEchoicResonatorBlockEntity
 import com.unddefined.enderechoing.client.gui.TunerMenu;
 import com.unddefined.enderechoing.client.model.item.WarpCoreModel;
 import com.unddefined.enderechoing.client.renderer.item.WarpCoreRenderer;
+import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
 import com.unddefined.enderechoing.network.packet.OpenEditScreenPacket;
 import com.unddefined.enderechoing.network.packet.RenderEchoNamesPacket;
 import com.unddefined.enderechoing.network.packet.SetEchoSoundingPosPacket;
@@ -47,7 +48,6 @@ import static com.unddefined.enderechoing.Config.EECORE_TP_DISTANCE;
 import static com.unddefined.enderechoing.server.registry.BlockRegistry.ENDER_ECHO_CRYSTAL;
 import static com.unddefined.enderechoing.server.registry.DataRegistry.*;
 import static com.unddefined.enderechoing.server.registry.ItemRegistry.ENDER_ECHOING_PEARL;
-import static com.unddefined.enderechoing.server.registry.MobEffectRegistry.SCULK_VEIL;
 import static net.minecraft.core.component.DataComponents.CUSTOM_NAME;
 import static net.minecraft.world.item.Rarity.EPIC;
 
@@ -101,7 +101,7 @@ public class WarpCore extends Item implements GeoItem {
         }
 
         Map<BlockPos, String> Map = new HashMap<>();
-        if (S.hasEffect(SCULK_VEIL) || level.getBlockState(S.blockPosition()).is(ENDER_ECHO_CRYSTAL)) {
+        if (SculkBorneBridge.hasVeil(S) || level.getBlockState(S.blockPosition()).is(ENDER_ECHO_CRYSTAL)) {
             PacketDistributor.sendToPlayer(S, new RenderEchoNamesPacket(Map));
             state.tick2 = 60;
             return;
@@ -125,7 +125,7 @@ public class WarpCore extends Item implements GeoItem {
     @Override
     public boolean onDroppedByPlayer(ItemStack item, Player player) {
         if (!(player instanceof ServerPlayer S)) return false;
-        if (S.hasEffect(SCULK_VEIL)) return true;
+        if (SculkBorneBridge.hasVeil(S)) return true;
         PacketDistributor.sendToPlayer(S, new SetEchoSoundingPosPacket(BlockPos.ZERO));
         PacketDistributor.sendToPlayer(S, new RenderEchoNamesPacket(new HashMap<>()));
         return true;

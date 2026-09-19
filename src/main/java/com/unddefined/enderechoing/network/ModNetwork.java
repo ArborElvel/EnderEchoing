@@ -36,13 +36,6 @@ public class ModNetwork {
                 () -> OpenEditScreenPacket::handle
         );
 
-        // 注册次声波粒子效果数据包
-        registerClientPayload(registrar,
-                InfrasoundParticlePacket.TYPE,
-                InfrasoundParticlePacket.STREAM_CODEC,
-                () -> InfrasoundParticlePacket::handle
-        );
-
         // 注册添加效果数据包
         registrar.playToServer(
                 AddEffectPacket.TYPE,

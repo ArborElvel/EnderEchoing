@@ -1,4 +1,13 @@
 {
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:not",
+      "value": {
+        "type": "neoforge:mod_loaded",
+        "modid": "sculkborne"
+      }
+    }
+  ],
   "type": "minecraft:crafting_shapeless",
   "ingredients": [{"item": "enderechoing:echo_druse"}],
   "result": {

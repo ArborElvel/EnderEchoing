@@ -4,6 +4,7 @@ import com.unddefined.enderechoing.Config;
 import com.unddefined.enderechoing.blocks.entity.EnderEchoicResonatorBlockEntity;
 import com.unddefined.enderechoing.client.model.item.EnderEchoingCoreModel;
 import com.unddefined.enderechoing.client.renderer.item.EnderEchoingCoreRenderer;
+import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
 import com.unddefined.enderechoing.network.packet.*;
 import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
 import com.unddefined.enderechoing.server.registry.ItemRegistry;
@@ -50,7 +51,6 @@ import static com.unddefined.enderechoing.Config.EECORE_TP_DISTANCE;
 import static com.unddefined.enderechoing.EnderEchoing.GZERO;
 import static com.unddefined.enderechoing.server.registry.BlockRegistry.ENDER_ECHO_CRYSTAL;
 import static com.unddefined.enderechoing.server.registry.DataRegistry.*;
-import static com.unddefined.enderechoing.server.registry.MobEffectRegistry.SCULK_VEIL;
 import static net.minecraft.core.component.DataComponents.CUSTOM_NAME;
 import static net.minecraft.world.effect.MobEffects.GLOWING;
 
@@ -123,7 +123,7 @@ public class EnderEchoingCore extends Item implements GeoItem {
         }
 
         Map<BlockPos, String> Map = new HashMap<>();
-        if (S.hasEffect(SCULK_VEIL) || level.getBlockState(S.blockPosition()).is(ENDER_ECHO_CRYSTAL)) {
+        if (SculkBorneBridge.hasVeil(S) || level.getBlockState(S.blockPosition()).is(ENDER_ECHO_CRYSTAL)) {
             PacketDistributor.sendToPlayer(S, new RenderEchoNamesPacket(Map));
             state.tick2 = 60;
             return;
@@ -147,7 +147,7 @@ public class EnderEchoingCore extends Item implements GeoItem {
     @Override
     public boolean onDroppedByPlayer(ItemStack item, Player player) {
         if (!(player instanceof ServerPlayer S)) return false;
-        if (S.hasEffect(SCULK_VEIL)) return true;
+        if (SculkBorneBridge.hasVeil(S)) return true;
         PacketDistributor.sendToPlayer(S, new SetEchoSoundingPosPacket(BlockPos.ZERO));
         PacketDistributor.sendToPlayer(S, new RenderEchoNamesPacket(new HashMap<>()));
         return true;
@@ -164,7 +164,7 @@ public class EnderEchoingCore extends Item implements GeoItem {
                 if (S.getCooldowns().isOnCooldown(this)) return InteractionResultHolder.fail(itemStack);
                 // 检查玩家是否发光，如果发光则无法使用
                 if (S.isCurrentlyGlowing()) return InteractionResultHolder.fail(itemStack);
-                var sculk_veil = new MobEffectInstance(SCULK_VEIL, 20 * 3, 0, false, true);
+                var sculk_veil = new MobEffectInstance(SculkBorneBridge.veilEffect(), 20 * 3, 0, false, true);
                 // 新增：副手持有绑定到其他玩家的珍珠时，优先传送到该玩家的位置
                 var offhandPearl = player.getOffhandItem();
                 var boundPlayer = offhandPearl.get(ENTITY.get());

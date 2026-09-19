@@ -2,6 +2,7 @@ package com.unddefined.enderechoing.blocks;
 
 import com.unddefined.enderechoing.blocks.entity.EnderEchoTunerBlockEntity;
 import com.unddefined.enderechoing.client.gui.TunerMenu;
+import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
 import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
 import com.unddefined.enderechoing.server.registry.BlockEntityRegistry;
 import com.unddefined.enderechoing.server.registry.ItemRegistry;
@@ -159,7 +160,8 @@ public class EnderEchoTunerBlock extends Block implements EntityBlock {
 
     @Override
     public List<ItemStack> getDrops(BlockState state, LootParams.Builder builder) {
-        return List.of(new ItemStack(ItemRegistry.ENDER_ECHO_TUNE_CHAMBER.get()), new ItemStack(ItemRegistry.CALIBRATED_SCULK_SHRIEKER_ITEM.get()));
+        return List.of(new ItemStack(ItemRegistry.ENDER_ECHO_TUNE_CHAMBER.get()),
+                new ItemStack(SculkBorneBridge.calibratedShriekerItem()));
     }
 
     @Override

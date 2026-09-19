@@ -2,11 +2,11 @@ package com.unddefined.enderechoing.items;
 
 import com.unddefined.enderechoing.blocks.entity.EnderEchoTunerBlockEntity;
 import com.unddefined.enderechoing.blocks.entity.EnderEchoicResonatorBlockEntity;
+import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
 import com.unddefined.enderechoing.network.packet.SetEchoSoundingPosPacket;
 import com.unddefined.enderechoing.network.packet.SetTeleportPosPacket;
 import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
 import com.unddefined.enderechoing.server.registry.ItemRegistry;
-import com.unddefined.enderechoing.server.registry.MobEffectRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
@@ -92,7 +92,7 @@ public class EnderEchoCompass extends Item {
             PacketDistributor.sendToPlayer(S, new SetEchoSoundingPosPacket(player.blockPosition()));
             PacketDistributor.sendToPlayer(S, new SetTeleportPosPacket(pos, true));
 
-            player.addEffect(new MobEffectInstance(MobEffectRegistry.SCULK_VEIL, 20 * 3, 0, false, true));
+            player.addEffect(new MobEffectInstance(SculkBorneBridge.veilEffect(), 20 * 3, 0, false, true));
             player.startUsingItem(hand);
             return InteractionResultHolder.success(stack);
         }
