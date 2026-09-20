@@ -14,7 +14,7 @@ public class CreativeModeTabRegistry {
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, "enderechoing");
 
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> ENDER_ECHOING =
-            CREATIVE_MODE_TABS.register("enderechoing", () -> CreativeModeTab.builder()
+            CompatSculkRegistry.ACTIVE ? CREATIVE_MODE_TABS.register("enderechoing", () -> CreativeModeTab.builder()
                     .title(Component.translatable("creativetab.enderechoing"))
                     .withTabsBefore(CreativeModeTabs.COMBAT)
                     .icon(() -> ItemRegistry.ENDER_ECHOING_CORE.get().getDefaultInstance())
@@ -34,5 +34,5 @@ public class CreativeModeTabRegistry {
                             output.accept(CompatSculkRegistry.ECHO_DRUSE.get());
                             output.accept(CompatSculkRegistry.CALIBRATED_SCULK_SHRIEKER_ITEM.get());
                         }
-                    }).build());
+                    }).build()) : null;
 }

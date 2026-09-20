@@ -46,14 +46,33 @@ public class EchoRenderer {
     private static int responseTime = 30;
     private static boolean isCounting = false;
     private static boolean isTeleporting = false;
+    private static boolean renderedBySculkVeilDriver = false;
     private static long lastTickGameTime = -1;
+
+    /**
+     * 供 sculkborne 的影匿后处理在幽匿雾画完之后回调：两个 mod 同时加载时由它在 AFTER_LEVEL 最后叠加回响波，
+     * 避免雾把波盖住。同一帧内 {@link #renderEcho} 不会再画第二遍。
+     */
+    public static void renderEchoAfterSculkVeil(RenderLevelStageEvent event) {
+        if (!canRender(event)) return;
+        renderWorldEffects(event.getPoseStack(), event.getPartialTick().getGameTimeDeltaTicks(),
+                event.getModelViewMatrix(), event.getProjectionMatrix());
+        renderedBySculkVeilDriver = true;
+    }
 
     @SubscribeEvent
     public static void renderEcho(RenderLevelStageEvent event) {
-        if (mc.player == null || !isCounting) return;
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_LEVEL) return;
+        if (!canRender(event)) return;
+        if (renderedBySculkVeilDriver) {
+            renderedBySculkVeilDriver = false;
+            return;
+        }
         renderWorldEffects(event.getPoseStack(), event.getPartialTick().getGameTimeDeltaTicks(),
                 event.getModelViewMatrix(), event.getProjectionMatrix());
+    }
+
+    private static boolean canRender(RenderLevelStageEvent event) {
+        return mc.player != null && isCounting && event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL;
     }
 
     private static void renderWorldEffects(PoseStack poseStack, float partialTicks, Matrix4f modelView, Matrix4f projection) {
@@ -176,5 +195,6 @@ public class EchoRenderer {
         targetPos = null;
         teleportTicks = 0;
         isTeleporting = false;
+        renderedBySculkVeilDriver = false;
     }
 }
