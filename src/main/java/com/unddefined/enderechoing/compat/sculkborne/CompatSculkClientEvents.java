@@ -3,6 +3,7 @@ package com.unddefined.enderechoing.compat.sculkborne;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import com.unddefined.enderechoing.EnderEchoing;
+import com.unddefined.enderechoing.client.renderer.EchoRenderer;
 import com.unddefined.enderechoing.client.renderer.SculkVeilRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.level.biome.Biomes;
@@ -34,8 +35,15 @@ public final class CompatSculkClientEvents {
         SculkVeilRenderer.DEEP_DARK.fogDensity = hasVeil ? 0.15f : 0.06f;
         SculkVeilRenderer.DEEP_DARK.updateFadeProgress(inDeepDark, partialTicks);
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_LEVEL) return;
-        if (SculkVeilRenderer.BUFF.fadeProgress == 0f && SculkVeilRenderer.DEEP_DARK.fadeProgress == 0f) return;
 
+        if (SculkVeilRenderer.BUFF.fadeProgress != 0f || SculkVeilRenderer.DEEP_DARK.fadeProgress != 0f)
+            renderVeilChains(event, partialTicks);
+
+        // 幽匿雾画完之后再叠加回响波：影匿不该把波盖住。sculkborne 存在时由它的后处理回调同一入口。
+        EchoRenderer.renderEchoAfterSculkVeil(event);
+    }
+
+    private static void renderVeilChains(RenderLevelStageEvent event, float partialTicks) {
         Matrix4f modelView = event.getModelViewMatrix();
         Matrix4f projection = event.getProjectionMatrix();
         if (modelView == null || projection == null) return;

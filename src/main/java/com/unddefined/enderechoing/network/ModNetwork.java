@@ -85,11 +85,6 @@ public class ModNetwork {
                 () -> SetEchoSoundingPosPacket::handle
         );
         registerClientPayload(registrar,
-                SetPlayerAnimationPacket.TYPE,
-                SetPlayerAnimationPacket.STREAM_CODEC,
-                () -> SetPlayerAnimationPacket::handle
-        );
-        registerClientPayload(registrar,
                 SendMarkedPositionNamesPacket.TYPE,
                 SendMarkedPositionNamesPacket.STREAM_CODEC,
                 () -> SendMarkedPositionNamesPacket::handle

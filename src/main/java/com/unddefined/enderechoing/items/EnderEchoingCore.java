@@ -5,13 +5,13 @@ import com.unddefined.enderechoing.blocks.entity.EnderEchoicResonatorBlockEntity
 import com.unddefined.enderechoing.client.model.item.EnderEchoingCoreModel;
 import com.unddefined.enderechoing.client.renderer.item.EnderEchoingCoreRenderer;
 import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
-import com.unddefined.enderechoing.network.packet.*;
+import com.unddefined.enderechoing.network.packet.OpenEditScreenPacket;
+import com.unddefined.enderechoing.network.packet.RenderEchoNamesPacket;
+import com.unddefined.enderechoing.network.packet.SetEchoSoundingPosPacket;
+import com.unddefined.enderechoing.network.packet.SetTeleportPosPacket;
 import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
 import com.unddefined.enderechoing.server.registry.ItemRegistry;
 import com.unddefined.enderechoing.util.Utils;
-import dev.kosmx.playerAnim.api.layered.AnimationStack;
-import dev.kosmx.playerAnim.minecraftApi.PlayerAnimationAccess;
-import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -165,7 +165,7 @@ public class EnderEchoingCore extends Item implements GeoItem {
                 // 检查玩家是否发光，如果发光则无法使用
                 if (S.isCurrentlyGlowing()) return InteractionResultHolder.fail(itemStack);
                 var sculk_veil = new MobEffectInstance(SculkBorneBridge.veilEffect(), 20 * 3, 0, false, true);
-                // 新增：副手持有绑定到其他玩家的珍珠时，优先传送到该玩家的位置
+                // 副手持有绑定到其他玩家的珍珠时，优先传送到该玩家的位置
                 var offhandPearl = player.getOffhandItem();
                 var boundPlayer = offhandPearl.get(ENTITY.get());
                 if (boundPlayer != null && !boundPlayer.playerId().equals(player.getUUID())) {
@@ -191,7 +191,6 @@ public class EnderEchoingCore extends Item implements GeoItem {
                         e.addEffect(sculk_veil);
                         PacketDistributor.sendToPlayer(e, new SetEchoSoundingPosPacket(player.blockPosition()));
                     });
-                    PacketDistributor.sendToPlayer(S, new SetPlayerAnimationPacket());
                     if (level instanceof ServerLevel SL) triggerAnim(S, GeoItem.getOrAssignId(itemStack, SL), CONTROLLER_NAME, ANIM_USE);
 
                     player.startUsingItem(hand);
@@ -214,7 +213,6 @@ public class EnderEchoingCore extends Item implements GeoItem {
                 // 渲染传送特效
                 PacketDistributor.sendToPlayer(S, new SetEchoSoundingPosPacket(player.blockPosition()));
                 PacketDistributor.sendToPlayer(S, new SetTeleportPosPacket(nearestTeleporterPos, true));
-                PacketDistributor.sendToPlayer(S, new SetPlayerAnimationPacket());
                 player.addEffect(sculk_veil);
                 playerList.forEach(e -> {
                     e.addEffect(sculk_veil);
@@ -246,14 +244,8 @@ public class EnderEchoingCore extends Item implements GeoItem {
 
     @Override
     public void releaseUsing(ItemStack stack, Level level, LivingEntity livingEntity, int timeLeft) {
-        // 当玩家释放使用物品时，移除动画层
         super.releaseUsing(stack, level, livingEntity, timeLeft);
         if(level.getRandom().nextInt(5) == 0) livingEntity.addEffect(new MobEffectInstance(GLOWING,300));
-        if (livingEntity instanceof AbstractClientPlayer clientPlayer) {
-            AnimationStack animationStack = PlayerAnimationAccess.getPlayerAnimLayer(clientPlayer);
-            animationStack.removeLayer(42);
-        }
-
         if (level instanceof ServerLevel SL && livingEntity instanceof ServerPlayer S) {
             stopTriggeredAnim(S, GeoItem.getOrAssignId(stack, SL), CONTROLLER_NAME, null);
             PacketDistributor.sendToPlayer(S, new SetEchoSoundingPosPacket(BlockPos.ZERO));
@@ -281,12 +273,6 @@ public class EnderEchoingCore extends Item implements GeoItem {
             // 设置冷却时间
             player.getCooldowns().addCooldown(this, Config.ENDER_ECHOING_CORE_COOLDOWN.get() * 20);
             state.cost = 0;
-        }
-        if (level.isClientSide() && livingEntity instanceof Player player && !player.isUsingItem()) {
-            if (player instanceof AbstractClientPlayer clientPlayer) {
-                AnimationStack playerAnim = PlayerAnimationAccess.getPlayerAnimLayer(clientPlayer);
-                playerAnim.removeLayer(42);
-            }
         }
         return stack;
     }

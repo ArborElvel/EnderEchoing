@@ -7,7 +7,7 @@
     "EnderManMixin",
     "EntityMixin"
   ],
-  "client": ["EndCrystalRendererMixin", "FlyTowardsPositionParticleMixin", "FogDataAccessor", "FogRendererMixin", "IrisDarknessFactorMixin"],
+  "client": ["EndCrystalRendererMixin", "FlyTowardsPositionParticleMixin", "FogDataAccessor", "FogRendererMixin", "HumanoidModelMixin", "IrisDarknessFactorMixin"],
   "server": [
   ],
   "injectors": {

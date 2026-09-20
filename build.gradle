@@ -27,10 +27,6 @@ repositories {
         }
     }
     maven {
-        name "KosmX's maven"
-        url 'https://maven.kosmx.dev/'
-    }
-    maven {
         name = "JEI"
         url = "https://maven.blamejared.com"
     }
@@ -166,7 +162,6 @@ dependencies {
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
     implementation "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
-    implementation ("dev.kosmx.player-anim:player-animation-lib-forge:${project.player_anim_version}")
     runtimeOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}"
     compileOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}:api"
 }
@@ -186,8 +181,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             mod_authors            : mod_authors,
             mod_description        : mod_description,
             geckolib_version       : geckolib_version,
-            curios_version_range   : curios_version_range,
-            player_anim_version    : player_anim_version
+            curios_version_range   : curios_version_range
     ]
     inputs.properties replaceProperties
     expand replaceProperties
