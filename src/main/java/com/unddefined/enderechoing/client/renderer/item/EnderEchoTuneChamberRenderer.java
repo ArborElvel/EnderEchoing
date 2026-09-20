@@ -3,18 +3,19 @@ package com.unddefined.enderechoing.client.renderer.item;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.unddefined.enderechoing.client.model.item.EnderEchoTuneChamberModel;
+import com.unddefined.enderechoing.client.renderer.layer.AutoGlowingBeforeModelLayer;
 import com.unddefined.enderechoing.items.EnderEchoTuneChamber;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.renderer.GeoItemRenderer;
-import software.bernie.geckolib.renderer.layer.AutoGlowingGeoLayer;
 
 public class EnderEchoTuneChamberRenderer extends GeoItemRenderer<EnderEchoTuneChamber> {
     public EnderEchoTuneChamberRenderer() {
         super(new EnderEchoTuneChamberModel<>());
-        addRenderLayer(new AutoGlowingGeoLayer<>(this));
+        // letters 的发光面被 shield/frame 包住，必须在外壳写下深度之前绘制，否则会被深度测试整片剔除
+        addRenderLayer(new AutoGlowingBeforeModelLayer<>(this));
     }
     private final ResourceLocation Core_layer = ResourceLocation.fromNamespaceAndPath("enderechoing", "textures/misc/core_layer.png");
     @Override
