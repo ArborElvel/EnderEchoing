@@ -2,6 +2,7 @@ package com.unddefined.enderechoing.compat.sculkborne;
 
 import com.mojang.serialization.Codec;
 import com.unddefined.enderechoing.blocks.CalibratedSculkShriekerBlock;
+import com.unddefined.enderechoing.blocks.EchoDruseBlock;
 import com.unddefined.enderechoing.effects.SculkVeilEffect;
 import com.unddefined.enderechoing.items.EchoDruse;
 import net.minecraft.core.registries.Registries;
@@ -30,6 +31,10 @@ public final class CompatSculkRegistry {
     public static final DeferredItem<BlockItem> CALIBRATED_SCULK_SHRIEKER_ITEM =
             ITEMS.registerSimpleBlockItem("calibrated_sculk_shrieker", CALIBRATED_SCULK_SHRIEKER);
     public static final DeferredItem<EchoDruse> ECHO_DRUSE = ITEMS.registerItem("echo_druse", EchoDruse::new);
+    public static final DeferredBlock<EchoDruseBlock> ECHO_DRUSE_BLOCK =
+            BLOCKS.register("echo_druse_block", EchoDruseBlock::new);
+    public static final DeferredItem<BlockItem> ECHO_DRUSE_BLOCK_ITEM =
+            ITEMS.registerSimpleBlockItem("echo_druse_block", ECHO_DRUSE_BLOCK);
     public static final DeferredItem<Item> RHYME_SHARD = ITEMS.registerSimpleItem("rhyme_shard", new Item.Properties()
             .rarity(Rarity.UNCOMMON).component(net.minecraft.core.component.DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true));
 

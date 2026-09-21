@@ -3,6 +3,7 @@
   "package": "com.unddefined.enderechoing.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "CatalystListenerMixin",
     "EndCrystalMixin",
     "EnderManMixin",
     "EntityMixin"

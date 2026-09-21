@@ -32,6 +32,7 @@ public class CreativeModeTabRegistry {
                         if (CompatSculkRegistry.ACTIVE) {
                             output.accept(CompatSculkRegistry.RHYME_SHARD.get());
                             output.accept(CompatSculkRegistry.ECHO_DRUSE.get());
+                            output.accept(CompatSculkRegistry.ECHO_DRUSE_BLOCK_ITEM.get());
                             output.accept(CompatSculkRegistry.CALIBRATED_SCULK_SHRIEKER_ITEM.get());
                         }
                     }).build()) : null;

@@ -1,9 +1,6 @@
 package com.unddefined.enderechoing.server.registry;
 
-import com.unddefined.enderechoing.blocks.entity.CalibratedSculkShriekerBlockEntity;
-import com.unddefined.enderechoing.blocks.entity.EnderEchoCrystalBlockEntity;
-import com.unddefined.enderechoing.blocks.entity.EnderEchoTunerBlockEntity;
-import com.unddefined.enderechoing.blocks.entity.EnderEchoicResonatorBlockEntity;
+import com.unddefined.enderechoing.blocks.entity.*;
 import com.unddefined.enderechoing.compat.sculkborne.CompatSculkRegistry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -37,6 +34,14 @@ public class BlockEntityRegistry {
                     ? BLOCK_ENTITY_TYPES.register("calibrated_sculk_shrieker_blockentity", () -> BlockEntityType.Builder.of(
                             CalibratedSculkShriekerBlockEntity::new,
                             CompatSculkRegistry.CALIBRATED_SCULK_SHRIEKER.get()
+                    ).build(null))
+                    : null;
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<EchoDruseBlockEntity>> ECHO_DRUSE =
+            CompatSculkRegistry.ACTIVE
+                    ? BLOCK_ENTITY_TYPES.register("echo_druse_blockentity", () -> BlockEntityType.Builder.of(
+                            EchoDruseBlockEntity::new,
+                            CompatSculkRegistry.ECHO_DRUSE_BLOCK.get()
                     ).build(null))
                     : null;
 }

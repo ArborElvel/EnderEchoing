@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "enderechoing:echo_druse_block",
+      "required": false
+    }
+  ]
+}

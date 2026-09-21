@@ -55,6 +55,14 @@ public class Config {
             .comment("Duration of the Glowing effect applied by Sculk Veil, in seconds.")
             .defineInRange("sculk_veil_glowing_duration", 25, 20, Integer.MAX_VALUE);
 
+    public static final ModConfigSpec.IntValue ECHO_DRUSE_MAX_GROWTH_VALUE = BUILDER
+            .comment("Maximum growth value of an Echo Druse.")
+            .defineInRange("echo_druse_max_growth_value", 40000, 4, Integer.MAX_VALUE);
+
+    public static final ModConfigSpec.IntValue SCULK_SHRIEKER_CAN_SUMMON_CHANCE = BUILDER
+            .comment("1 in N chance for a Sculk Shrieker to gain CAN_SUMMON when a nearby entity dies on a Sculk Catalyst.")
+            .defineInRange("sculk_shrieker_can_summon_chance", 7, 1, Integer.MAX_VALUE);
+
     public static final ModConfigSpec.IntValue EchoSoundingDistance = BUILDER
             .comment("Maximum distance at which a resonator can detect another resonator, in blocks.")
             .defineInRange("Echo_Sounding_Distance", 2048, 1, Integer.MAX_VALUE);
