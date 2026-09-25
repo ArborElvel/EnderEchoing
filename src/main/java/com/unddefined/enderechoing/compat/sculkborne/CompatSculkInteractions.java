@@ -12,8 +12,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.ticks.ContainerSingleItem;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
@@ -65,6 +67,25 @@ public final class CompatSculkInteractions {
             level.setBlock(pos, BlockRegistry.ENDER_ECHO_CRYSTAL.get().defaultBlockState(), 3);
             level.addFreshEntity(new EnderEchoCrystalEntity(level, pos));
             EnderEchoCrystalSavedData.get((ServerLevel) level).add(level.dimension(), pos);
+            event.setCancellationResult(InteractionResult.SUCCESS);
+            event.setCanceled(true);
+        }
+
+        // 龙息灌注：要求校频幽匿尖啸体内已放入折跃核心
+        if (stack.is(Items.DRAGON_BREATH)
+                && level.getBlockEntity(pos) instanceof ContainerSingleItem shrieker
+                && shrieker.getTheItem().is(ItemRegistry.WARP_CORE.get())) {
+            if (!player.isCreative()) stack.shrink(1);
+            // 折跃核心由折跃平台承接，先清空槽位，避免 onRemove 再掉落一次
+            shrieker.setTheItem(ItemStack.EMPTY);
+            level.setBlock(pos, BlockRegistry.WARP_PLATFORM.get().defaultBlockState(), 3);
+            MarkedPositionsManager.getManager(player).addTeleporter(level, pos);
+            if (player.getInventory().hasAnyMatching(item ->
+                    item.getItem() == ItemRegistry.ENDER_ECHOING_PEARL.get() && item.get(CUSTOM_NAME) == null)
+                    || player.getData(EE_PEARL_AMOUNT.get()) > 0) {
+                PacketDistributor.sendToPlayer((ServerPlayer) player, new OpenEditScreenPacket("><", pos));
+                player.setData(EE_PEARL_POSITION.get(), pos);
+            }
             event.setCancellationResult(InteractionResult.SUCCESS);
             event.setCanceled(true);
         }

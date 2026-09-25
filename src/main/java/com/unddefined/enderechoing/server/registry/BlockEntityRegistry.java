@@ -13,35 +13,35 @@ public class BlockEntityRegistry {
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<EnderEchoicResonatorBlockEntity>> ENDER_ECHOIC_RESONATOR =
             BLOCK_ENTITY_TYPES.register("ender_echoic_resonator_blockentity", () -> BlockEntityType.Builder.of(
-                    EnderEchoicResonatorBlockEntity::new,
-                    BlockRegistry.ENDER_ECHOIC_RESONATOR.get()
+                    EnderEchoicResonatorBlockEntity::new, BlockRegistry.ENDER_ECHOIC_RESONATOR.get()
             ).build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<EnderEchoTunerBlockEntity>> ENDER_ECHO_TUNER =
             BLOCK_ENTITY_TYPES.register("ender_echo_tuner_blockentity", () -> BlockEntityType.Builder.of(
-                    EnderEchoTunerBlockEntity::new,
-                    BlockRegistry.ENDER_ECHO_TUNER.get()
+                    EnderEchoTunerBlockEntity::new, BlockRegistry.ENDER_ECHO_TUNER.get()
+            ).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<WarpPlatformBlockEntity>> WARP_PLATFORM =
+            BLOCK_ENTITY_TYPES.register("warp_platform_blockentity", () -> BlockEntityType.Builder.of(
+                    WarpPlatformBlockEntity::new, BlockRegistry.WARP_PLATFORM.get()
             ).build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<EnderEchoCrystalBlockEntity>> ENDER_ECHO_CRYSTAL =
             BLOCK_ENTITY_TYPES.register("ender_echo_crystal_blockentity", () -> BlockEntityType.Builder.of(
-                    EnderEchoCrystalBlockEntity::new,
-                    BlockRegistry.ENDER_ECHO_CRYSTAL.get()
+                    EnderEchoCrystalBlockEntity::new, BlockRegistry.ENDER_ECHO_CRYSTAL.get()
             ).build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CalibratedSculkShriekerBlockEntity>> CALIBRATED_SCULK_SHRIEKER =
             CompatSculkRegistry.ACTIVE
                     ? BLOCK_ENTITY_TYPES.register("calibrated_sculk_shrieker_blockentity", () -> BlockEntityType.Builder.of(
-                            CalibratedSculkShriekerBlockEntity::new,
-                            CompatSculkRegistry.CALIBRATED_SCULK_SHRIEKER.get()
+                            CalibratedSculkShriekerBlockEntity::new, CompatSculkRegistry.CALIBRATED_SCULK_SHRIEKER.get()
                     ).build(null))
                     : null;
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<EchoDruseBlockEntity>> ECHO_DRUSE =
             CompatSculkRegistry.ACTIVE
                     ? BLOCK_ENTITY_TYPES.register("echo_druse_blockentity", () -> BlockEntityType.Builder.of(
-                            EchoDruseBlockEntity::new,
-                            CompatSculkRegistry.ECHO_DRUSE_BLOCK.get()
+                            EchoDruseBlockEntity::new, CompatSculkRegistry.ECHO_DRUSE_BLOCK.get()
                     ).build(null))
                     : null;
 }

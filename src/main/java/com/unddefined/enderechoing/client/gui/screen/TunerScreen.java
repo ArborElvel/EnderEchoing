@@ -175,7 +175,7 @@ public class TunerScreen extends AbstractContainerScreen<TunerMenu> {
     public void onClose() {
         if (menu.getIconList().get(selectedTab).isEmpty()) menu.getIconList().set(selectedTab, previousIcon);
         PacketDistributor.sendToServer(new SyncTunerDataPacket(menu.getIconList(), MarkedPositionsCache, menu.ee_pearl_amount));
-        if (!menu.isFacing_down()) menu.setSelectedPosition(null);
+        if (!menu.isFacing_down() && !menu.canWarp()) menu.setSelectedPosition(null);
         super.onClose();
     }
 

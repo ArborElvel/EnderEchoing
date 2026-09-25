@@ -1,11 +1,13 @@
 package com.unddefined.enderechoing.client.gui;
 
 import com.unddefined.enderechoing.blocks.entity.EnderEchoTunerBlockEntity;
+import com.unddefined.enderechoing.blocks.entity.WarpPlatformBlockEntity;
 import com.unddefined.enderechoing.network.packet.GivePlayerPearlPacket;
 import com.unddefined.enderechoing.network.packet.SetSelectedPositionPacket;
 import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
 import com.unddefined.enderechoing.server.team.PlayerTeam;
 import com.unddefined.enderechoing.server.team.TeamManager;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
@@ -87,6 +89,7 @@ public class TunerMenu extends AbstractContainerMenu {
                 facing_down = E.getBlockState().getValue(FACING).equals(Direction.DOWN);
                 selectedPos = E.getSelectedPos();
             }
+            if (level.getBlockEntity(pos) instanceof WarpPlatformBlockEntity E) selectedPos = E.getSelectedPos();
         });
     }
 
@@ -114,7 +117,7 @@ public class TunerMenu extends AbstractContainerMenu {
     }
 
     public void setSelectedPosition(MarkedPositionsManager.MarkedPositions M) {
-        if (canWarp) return;
+        if (canWarp && !(Minecraft.getInstance().level.getBlockEntity(tunerPos.pos()) instanceof WarpPlatformBlockEntity)) return;
         if (M == null) PacketDistributor.sendToServer(new SetSelectedPositionPacket(tunerPos.pos(), GZERO, ""));
         else PacketDistributor.sendToServer(new SetSelectedPositionPacket(tunerPos.pos(), new GlobalPos(M.dimension(), M.pos()), M.name()));
     }

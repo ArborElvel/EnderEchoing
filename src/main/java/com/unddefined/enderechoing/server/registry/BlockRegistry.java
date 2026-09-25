@@ -3,6 +3,7 @@ package com.unddefined.enderechoing.server.registry;
 import com.unddefined.enderechoing.blocks.EnderEchoCrystalBlock;
 import com.unddefined.enderechoing.blocks.EnderEchoTunerBlock;
 import com.unddefined.enderechoing.blocks.EnderEchoicResonatorBlock;
+import com.unddefined.enderechoing.blocks.WarpPlatformBlock;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -15,4 +16,6 @@ public class BlockRegistry {
             BLOCKS.register("ender_echo_tuner", EnderEchoTunerBlock::new);
     public static final DeferredBlock<EnderEchoCrystalBlock> ENDER_ECHO_CRYSTAL =
             BLOCKS.register("ender_echo_crystal_block", EnderEchoCrystalBlock::new);
+    public static final DeferredBlock<WarpPlatformBlock> WARP_PLATFORM =
+            BLOCKS.register("warp_platform", WarpPlatformBlock::new);
 }

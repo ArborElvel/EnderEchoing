@@ -2,16 +2,14 @@ package com.unddefined.enderechoing.network.packet;
 
 import com.unddefined.enderechoing.EnderEchoing;
 import com.unddefined.enderechoing.blocks.entity.EnderEchoTunerBlockEntity;
+import com.unddefined.enderechoing.blocks.entity.WarpPlatformBlockEntity;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.NotNull;
@@ -34,6 +32,7 @@ public record SetSelectedPositionPacket(BlockPos blockPos, GlobalPos selectedPos
             var player = context.player();
             BlockEntity be = player.level().getBlockEntity(blockPos);
             if (be instanceof EnderEchoTunerBlockEntity tuner) tuner.setSelectedPosition(selectedPos, name);
+            if (be instanceof WarpPlatformBlockEntity warp) warp.setSelectedPosition(selectedPos, name);
         });
     }
 

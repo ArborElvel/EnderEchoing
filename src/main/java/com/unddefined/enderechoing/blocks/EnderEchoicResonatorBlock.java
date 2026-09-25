@@ -68,7 +68,7 @@ public class EnderEchoicResonatorBlock extends Block implements EntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(CoolDown,CHARGED);
+        builder.add(CoolDown, CHARGED);
     }
 
     @Nullable
@@ -94,8 +94,7 @@ public class EnderEchoicResonatorBlock extends Block implements EntityBlock {
 
     @Override
     public List<ItemStack> getDrops(BlockState state, LootParams.Builder builder) {
-        return List.of(new ItemStack(ENDER_ECHOING_CORE.get()),
-                new ItemStack(SculkBorneBridge.calibratedShriekerItem()));
+        return List.of(new ItemStack(ENDER_ECHOING_CORE.get()), new ItemStack(SculkBorneBridge.calibratedShriekerItem()));
     }
 
     @Override
@@ -130,12 +129,14 @@ public class EnderEchoicResonatorBlock extends Block implements EntityBlock {
         if (entity.isCurrentlyGlowing()) return;
         var manager = MarkedPositionsManager.getManager(player);
         if (manager.teleporters().isEmpty() && manager.markedPositions().isEmpty()) return;
+        if (manager.teleporters().stream()
+                .noneMatch(e -> e.pos().equals(pos) && e.dimension().equals(level.dimension()))) return;
         level.scheduleTick(pos, this, 40);
         if (!state.getValue(CoolDown)) return;
         var playerList = Utils.getNearEchoPlayers(level, player);
         playerList.forEach(e -> {
-                PacketDistributor.sendToPlayer(e, new SetEchoSoundingPosPacket(pos));
-                e.addEffect(new MobEffectInstance(SculkBorneBridge.veilEffect(), state.getValue(CHARGED) ? 300 : 60));
+            PacketDistributor.sendToPlayer(e, new SetEchoSoundingPosPacket(pos));
+            e.addEffect(new MobEffectInstance(SculkBorneBridge.veilEffect(), state.getValue(CHARGED) ? 300 : 60));
         });
         PacketDistributor.sendToPlayer(player, new SetEchoSoundingPosPacket(pos));
         player.addEffect(new MobEffectInstance(SculkBorneBridge.veilEffect(), state.getValue(CHARGED) ? 300 : 60));

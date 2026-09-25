@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "enderechoing:block/warp_platform"
+    }
+  }
+}

@@ -19,12 +19,9 @@ import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.SlotAccess;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickAction;
 import net.minecraft.world.inventory.ContainerLevelAccess;
-import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.UseAnim;
@@ -46,7 +43,8 @@ import java.util.function.Consumer;
 
 import static com.unddefined.enderechoing.Config.EECORE_TP_DISTANCE;
 import static com.unddefined.enderechoing.server.registry.BlockRegistry.ENDER_ECHO_CRYSTAL;
-import static com.unddefined.enderechoing.server.registry.DataRegistry.*;
+import static com.unddefined.enderechoing.server.registry.DataRegistry.EE_PEARL_AMOUNT;
+import static com.unddefined.enderechoing.server.registry.DataRegistry.EE_PEARL_POSITION;
 import static com.unddefined.enderechoing.server.registry.ItemRegistry.ENDER_ECHOING_PEARL;
 import static net.minecraft.core.component.DataComponents.CUSTOM_NAME;
 import static net.minecraft.world.item.Rarity.EPIC;
@@ -67,7 +65,6 @@ public class WarpCore extends Item implements GeoItem {
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-
     }
 
     @Override
@@ -166,35 +163,6 @@ public class WarpCore extends Item implements GeoItem {
             player.setData(EE_PEARL_POSITION.get(), player.blockPosition());
         } else player.displayClientMessage(Component.translatable("pearl_not_enough"),true);
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
-    }
-    // 此操作在创造模式下不生效
-    public boolean overrideOtherStackedOnMe(ItemStack stack, ItemStack other, Slot slot, ClickAction action, Player player, SlotAccess access) {
-        if (stack.getCount() != 1) return false;
-        if (action != ClickAction.SECONDARY) return false;
-        if (!other.is(ENDER_ECHOING_PEARL.asItem())) return false;
-        addPearls(player, other);
-        return true;
-    }
-
-    @Override
-    public boolean overrideStackedOnOther(ItemStack stack, Slot slot, ClickAction action, Player player) {
-        if (stack.getCount() != 1) return false;
-        if (action != ClickAction.SECONDARY) return false;
-
-        ItemStack other = slot.getItem();
-        if (!other.is(ENDER_ECHOING_PEARL.asItem())) return false;
-        addPearls(player, other);
-        slot.setChanged();
-        return true;
-    }
-
-    private void addPearls(Player player, ItemStack other) {
-        var stackPos = other.get(POSITION);
-        boolean result = stackPos != null && MarkedPositionsManager.getManager(player)
-                .addMarkedPosition(stackPos.dimension(), stackPos.pos(), other.get(CUSTOM_NAME).getString(),
-                        0, Boolean.TRUE.equals(other.get(TBOUND)));
-        player.setData(EE_PEARL_AMOUNT, player.getData(EE_PEARL_AMOUNT) + other.getCount() - (result ? 1 : 0));
-        other.shrink(other.getCount());
     }
 
     @Override

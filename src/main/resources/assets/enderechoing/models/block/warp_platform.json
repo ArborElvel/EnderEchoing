@@ -1,0 +1,9 @@
+{
+  "format_version": "1.12.0",
+  "credit": "Made with Blockbench",
+  "texture_size": [32, 32],
+  "textures": {
+    "0": "enderechoing:block/calibrated_sculk_shrieker",
+    "particle": "enderechoing:block/calibrated_sculk_shrieker"
+  }
+}

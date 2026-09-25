@@ -2,10 +2,7 @@ package com.unddefined.enderechoing.client;
 
 import com.unddefined.enderechoing.EnderEchoing;
 import com.unddefined.enderechoing.client.gui.screen.TunerScreen;
-import com.unddefined.enderechoing.client.renderer.block.CalibratedSculkShriekerRenderer;
-import com.unddefined.enderechoing.client.renderer.block.EnderEchoCrystalBlockRenderer;
-import com.unddefined.enderechoing.client.renderer.block.EnderEchoTunerRenderer;
-import com.unddefined.enderechoing.client.renderer.block.EnderEchoicResonatorRenderer;
+import com.unddefined.enderechoing.client.renderer.block.*;
 import com.unddefined.enderechoing.client.renderer.entity.EnderEchoCrystalEntityRenderer;
 import com.unddefined.enderechoing.compat.sculkborne.CompatSculkRegistry;
 import com.unddefined.enderechoing.server.registry.BlockEntityRegistry;
@@ -71,6 +68,8 @@ public class EnderEchoingClient {
                     context -> new EnderEchoicResonatorRenderer());
             BlockEntityRenderers.register(BlockEntityRegistry.ENDER_ECHO_TUNER.get(),
                     context -> new EnderEchoTunerRenderer());
+            BlockEntityRenderers.register(BlockEntityRegistry.WARP_PLATFORM.get(),
+                    context -> new WarpPlatformRenderer());
             BlockEntityRenderers.register(BlockEntityRegistry.ENDER_ECHO_CRYSTAL.get(),
                     context -> new EnderEchoCrystalBlockRenderer());
             if (CompatSculkRegistry.ACTIVE) {
