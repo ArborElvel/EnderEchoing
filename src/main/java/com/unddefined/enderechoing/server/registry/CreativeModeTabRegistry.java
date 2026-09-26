@@ -6,6 +6,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.PotionContents;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -34,6 +35,9 @@ public class CreativeModeTabRegistry {
                             output.accept(CompatSculkRegistry.ECHO_DRUSE.get());
                             output.accept(CompatSculkRegistry.ECHO_DRUSE_BLOCK_ITEM.get());
                             output.accept(CompatSculkRegistry.CALIBRATED_SCULK_SHRIEKER_ITEM.get());
+                            output.accept(PotionContents.createItemStack(Items.POTION, CompatSculkRegistry.GLOWING));
+                            output.accept(PotionContents.createItemStack(Items.SPLASH_POTION, CompatSculkRegistry.GLOWING));
+                            output.accept(PotionContents.createItemStack(Items.LINGERING_POTION, CompatSculkRegistry.GLOWING));
                         }
                     }).build()) : null;
 }

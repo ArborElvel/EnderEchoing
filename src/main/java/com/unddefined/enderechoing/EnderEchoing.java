@@ -46,6 +46,7 @@ public class EnderEchoing {
             CompatSculkRegistry.BLOCKS.register(modEventBus);
             CompatSculkRegistry.ITEMS.register(modEventBus);
             CompatSculkRegistry.MOB_EFFECTS.register(modEventBus);
+            CompatSculkRegistry.POTIONS.register(modEventBus);
             CompatSculkRegistry.ATTACHMENTS.register(modEventBus);
         }
     }
