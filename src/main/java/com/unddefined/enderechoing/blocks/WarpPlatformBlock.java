@@ -91,8 +91,11 @@ public class WarpPlatformBlock extends Block implements EntityBlock {
         if (player.isShiftKeyDown()) {
             var destination = player.getServer().getLevel(BE.getSelectedPos().dimension());
             if (destination == null) return;
+            // 传送前记下出发地，传送成功后起点与终点都可能刷出幽匿螨
+            var fromPos = player.position();
             player.changeDimension(new DimensionTransition(destination, BE.getSelectedPos().pos().getCenter(),
                     player.getDeltaMovement(), player.getYRot(), player.getXRot(), DimensionTransition.PLAY_PORTAL_SOUND));
+            SculkBorneBridge.afterTeleport(player, level, fromPos);
         }
     }
 

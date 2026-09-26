@@ -3,6 +3,7 @@ package com.unddefined.enderechoing.server.events;
 import com.unddefined.enderechoing.EnderEchoing;
 import com.unddefined.enderechoing.blocks.EnderEchoCrystalBlock;
 import com.unddefined.enderechoing.compat.sculkborne.CompatSculkRegistry;
+import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
 import com.unddefined.enderechoing.server.DataComponents.EnderEchoCrystalSavedData;
 import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
 import com.unddefined.enderechoing.server.EnderEchoingEyeLocator;
@@ -143,8 +144,13 @@ public class ServerEvents {
                         && crystal.pos().pos().getZ() == pos.getZ()
                         && crystal.pos().pos().getY() > pos.getY())
                 .min(Comparator.comparingInt(crystal -> crystal.pos().pos().getY()))
-                .ifPresent(crystal -> player.teleportTo(crystal.pos().pos().getX() + 0.5,
-                        crystal.pos().pos().getY() + 0.5, crystal.pos().pos().getZ() + 0.5));
+                .ifPresent(crystal -> {
+                    // 传送前记下出发地，传送成功后起点与终点都可能刷出幽匿螨
+                    var fromPos = player.position();
+                    player.teleportTo(crystal.pos().pos().getX() + 0.5,
+                            crystal.pos().pos().getY() + 0.5, crystal.pos().pos().getZ() + 0.5);
+                    SculkBorneBridge.afterTeleport(player, level, fromPos);
+                });
     }
 
     @SubscribeEvent

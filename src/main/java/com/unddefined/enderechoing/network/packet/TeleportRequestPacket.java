@@ -3,6 +3,7 @@ package com.unddefined.enderechoing.network.packet;
 import com.unddefined.enderechoing.Config;
 import com.unddefined.enderechoing.EnderEchoing;
 import com.unddefined.enderechoing.blocks.entity.EnderEchoTunerBlockEntity;
+import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
 import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
 import com.unddefined.enderechoing.util.Utils;
 import net.minecraft.core.GlobalPos;
@@ -11,6 +12,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.portal.DimensionTransition;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.NotNull;
@@ -37,6 +39,8 @@ public record TeleportRequestPacket(GlobalPos targetPos, boolean canWarp) implem
             boolean crossDimension = !level.dimension().equals(msg.targetPos.dimension());
             boolean needsPearl = !MarkedPositionsManager.getManager(player).getMarkedTeleportersMap(level).containsKey(pos);
             var playerList = Utils.getNearEchoPlayers(level, player);
+            // 传送前记下出发地，传送成功后起点与终点都可能刷出幽匿螨
+            var fromPos = player.position();
             if (!crossDimension) {
                 player.teleportTo(pos.getCenter().x, pos.getCenter().y, pos.getCenter().z);
                 playerList.forEach( p -> p.teleportTo(pos.getCenter().x, pos.getCenter().y, pos.getCenter().z));
@@ -48,6 +52,9 @@ public record TeleportRequestPacket(GlobalPos targetPos, boolean canWarp) implem
                 playerList.forEach( p -> p.changeDimension(new DimensionTransition(destination, pos.getCenter(), player.getDeltaMovement(),
                         player.getYRot(), player.getXRot(), DimensionTransition.PLAY_PORTAL_SOUND)));
             }
+
+            // 传送成功：让 sculkborne 决定要不要在起点与终点刷出幽匿螨
+            if (player instanceof ServerPlayer serverPlayer) SculkBorneBridge.afterTeleport(serverPlayer, level, fromPos);
 
             // 只有传送成功后才扣除费用。
             int cost = (needsPearl && !msg.canWarp ? 1 : 0) + (crossDimension ? 1 : 0);

@@ -156,8 +156,11 @@ public class EnderEchoCrystalBlock extends Block implements EntityBlock {
                 && B.getSelectedPos().dimension().equals(level.dimension())
                 && Math.sqrt(B.getSelectedPos().pos().distSqr(pos)) <= D * D * 0.05){
             var Pos = B.getSelectedPos().pos().getCenter();
+            // 传送前记下出发地，传送成功后起点与终点都可能刷出幽匿螨
+            var fromPos = player.position();
             player.teleportTo(Pos.x,Pos.y,Pos.z);
             player.setData(EE_PEARL_AMOUNT, player.getData(EE_PEARL_AMOUNT) - 1);
+            SculkBorneBridge.afterTeleport(player, level, fromPos);
             return;
         }
         var crystals = EnderEchoCrystalSavedData.get((ServerLevel) level).getAll().stream().filter(C -> C.pos().dimension().equals(level.dimension())).toList();
@@ -173,7 +176,12 @@ public class EnderEchoCrystalBlock extends Block implements EntityBlock {
         if (player.isShiftKeyDown()) posList.keySet().stream().toList().stream()
                 .filter(p -> (p.getX() == pos.getX()) && (p.getZ() == pos.getZ()) && (p.getY() < pos.getY()))
                 .min(Comparator.comparingInt(BlockPos::getY))
-                .ifPresent(p -> player.teleportTo(p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5));
+                .ifPresent(p -> {
+                    // 传送前记下出发地，传送成功后起点与终点都可能刷出幽匿螨
+                    var fromPos = player.position();
+                    player.teleportTo(p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5);
+                    SculkBorneBridge.afterTeleport(player, level, fromPos);
+                });
     }
 
     @Nullable
