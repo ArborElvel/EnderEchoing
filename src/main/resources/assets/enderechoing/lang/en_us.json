@@ -70,6 +70,7 @@
   "message.enderechoing.team.remove_no_permission": "Only the team captain can remove members",
   "message.enderechoing.team.share_success": "Marked position shared with the team",
   "message.enderechoing.team.share_no_online_recipient": "No other team member is online to receive it",
+  "message.enderechoing.invalid_marker_removed": "Removed invalid Resonator: %s (%s)",
   "screen.enderechoing.dimension": "Dimension",
   "screen.enderechoing.biome": "Biome",
   "screen.enderechoing.structure": "Structure",

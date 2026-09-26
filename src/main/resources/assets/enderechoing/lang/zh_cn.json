@@ -70,6 +70,7 @@
   "message.enderechoing.team.remove_no_permission": "只有队长可以移出成员",
   "message.enderechoing.team.share_success": "已将该标记分享给队伍",
   "message.enderechoing.team.share_no_online_recipient": "队伍中没有其他在线队员可接收分享",
+  "message.enderechoing.invalid_marker_removed": "已移除失效的末影回响谐振器：%s（%s）",
   "screen.enderechoing.dimension": "维度",
   "screen.enderechoing.biome": "生物群系",
   "screen.enderechoing.structure": "所处结构/建筑",

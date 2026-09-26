@@ -30,9 +30,9 @@ import top.theillusivec4.curios.api.CuriosApi;
 import java.util.Comparator;
 
 import static com.unddefined.enderechoing.Config.SCULK_VEIL_GLOWING_DURATION;
-import static com.unddefined.enderechoing.EnderEchoing.LOGGER;
 import static com.unddefined.enderechoing.compat.sculkborne.CompatSculkRegistry.*;
 import static com.unddefined.enderechoing.server.registry.BlockRegistry.ENDER_ECHOIC_RESONATOR;
+import static com.unddefined.enderechoing.server.registry.BlockRegistry.WARP_PLATFORM;
 import static com.unddefined.enderechoing.server.registry.DataRegistry.EE_PEARL_AMOUNT;
 import static com.unddefined.enderechoing.server.registry.DataRegistry.MARKED_POSITIONS_CACHE;
 import static net.minecraft.world.effect.MobEffects.DARKNESS;
@@ -47,8 +47,10 @@ public class ServerEvents {
         data.removeIf(target -> {
             ServerLevel level = player.server.getLevel(target.dimension());
             if (level == null) return true;
-            if (!level.getBlockState(target.pos()).is(ENDER_ECHOIC_RESONATOR.get())) {
-                LOGGER.info("Removed invalid resonator at {}", target);
+            if (!level.getBlockState(target.pos()).is(ENDER_ECHOIC_RESONATOR.get())
+                && !level.getBlockState(target.pos()).is(WARP_PLATFORM.get())) {
+                player.sendSystemMessage(Component.translatable("message.enderechoing.invalid_marker_removed",
+                        target.pos().toShortString(), target.dimension().location().toString()));
                 return true;
             }
             return false;
