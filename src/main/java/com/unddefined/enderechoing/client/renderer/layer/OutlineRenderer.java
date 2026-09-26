@@ -16,6 +16,13 @@ import software.bernie.geckolib.util.RenderUtil;
 
 /**
  * GeckoLib Geo 模型的几何描边：顶点沿面法线外扩。
+ * <p>
+ * 只画几何的背面（顶点绕序反转 + CULL），近侧表面被剔除：描边因此不会盖住它包着的核心，
+ * 而是从外壳的镂空里露出一圈贴着核心的光。
+ * <p>
+ * 必须在基础模型之后调用，并且调用前先把基础模型的批次 flush 掉：此时模型已写入深度，
+ * 比描边更近的外壳/核心会把描边挡掉，比描边更远的方块和实体也会被描边挡住（描边写深度），
+ * 前后遮挡都交给正常的深度测试，不需要关掉深度测试（关掉反而会被自己的模型按绘制顺序盖住）。
  */
 public final class OutlineRenderer {
 
@@ -64,7 +71,7 @@ public final class OutlineRenderer {
         if (bone.isHidden()) return;
         poseStack.pushPose();
         try {
-//            RenderUtil.prepMatrixForBone(poseStack, bone);
+            RenderUtil.prepMatrixForBone(poseStack, bone);
 
             for (GeoCube cube : bone.getCubes()) renderCube(poseStack, cube, consumer, color, offset);
 
@@ -94,7 +101,11 @@ public final class OutlineRenderer {
                 normal.set(localNormal);
                 poseStack.last().normal().transform(normal).normalize();
 
-                for (GeoVertex vertex : quad.vertices()) {
+                // 逆序写入：GeckoLib 的 quad 是按"从外侧看逆时针"排的正面，
+                // 反过来配合 CULL 就只留下背面那一层，描边才不会糊在核心正面。
+                GeoVertex[] vertices = quad.vertices();
+                for (int i = vertices.length - 1; i >= 0; i--) {
+                    GeoVertex vertex = vertices[i];
                     Vector3f position = new Vector3f(vertex.position());
                     position.fma(offset, localNormal);
                     matrix.transformPosition(position);
@@ -120,9 +131,11 @@ public final class OutlineRenderer {
                     .setShaderState(new RenderStateShard.ShaderStateShard(GameRenderer::getPositionColorShader))
                     .setTextureState(RenderStateShard.NO_TEXTURE)
                     .setTransparencyState(RenderStateShard.GLINT_TRANSPARENCY)
-                    .setCullState(RenderStateShard.NO_CULL)
+                    // 背面剔除配合上面反转的顶点绕序：只画远离相机的那层几何
+                    .setCullState(RenderStateShard.CULL)
                     .setDepthTestState(RenderStateShard.LEQUAL_DEPTH_TEST)
-                    .setWriteMaskState(RenderStateShard.COLOR_WRITE)
+                    // 写深度：描边要能挡住它后面的实体，否则后画的实体还会从描边里透出来
+                    .setWriteMaskState(RenderStateShard.COLOR_DEPTH_WRITE)
                     .setLightmapState(RenderStateShard.NO_LIGHTMAP)
                     .createCompositeState(false)
     );

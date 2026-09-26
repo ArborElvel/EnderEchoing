@@ -36,13 +36,18 @@ public class WarpCoreRenderer extends GeoItemRenderer<WarpCore> {
         if (isReRender) return;
         if (bufferSource instanceof MultiBufferSource.BufferSource source) source.endBatch();
 
+        super.actuallyRender(poseStack, animatable, model, renderType, bufferSource,
+                buffer, false, partialTick, packedLight, packedOverlay, colour);
+
+        // 描边画在基础模型之后：外壳和核心写下的深度都比描边更近，会把描边挡在它们后面，
+        // 于是描边（只画背面那层）在核心周围露出一圈光而不会盖住核心；更近的方块/实体照常遮挡描边，
+        // 描边自己写深度也会挡住它后面的实体。
+        // flush 一次保证模型顶点先落到 GPU，否则描边会先画、再被随后 flush 的模型盖回去。
+        if (bufferSource instanceof MultiBufferSource.BufferSource source) source.endBatch();
         OutlineRenderer.render(poseStack, model, "frame", 0.86F,
                 FastColor.ABGR32.color(255, 90, 42, 77), 0.00F);
         OutlineRenderer.render(poseStack, model, "frame", 0.76F,
                 FastColor.ABGR32.color(255, 117, 10, 237), 0.00F);
-
-        super.actuallyRender(poseStack, animatable, model, renderType, bufferSource,
-                buffer, false, partialTick, packedLight, packedOverlay, colour);
     }
 
 }
