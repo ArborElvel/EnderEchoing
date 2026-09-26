@@ -180,6 +180,8 @@ public class EchoRenderer {
         });
         countTicks = isCounting ? countTicks + 1 : 0;
         if (countdownTicks == 0) {
+            isCounting = false;
+            echoMap.clear();
             reset();
             return;
         }
