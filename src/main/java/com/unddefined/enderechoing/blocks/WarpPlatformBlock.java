@@ -40,6 +40,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
+import static com.unddefined.enderechoing.EnderEchoing.GZERO;
 import static com.unddefined.enderechoing.server.registry.ItemRegistry.WARP_CORE;
 
 public class WarpPlatformBlock extends Block implements EntityBlock {
@@ -86,11 +87,12 @@ public class WarpPlatformBlock extends Block implements EntityBlock {
         if (!(level.getBlockEntity(pos) instanceof WarpPlatformBlockEntity BE)) return;
         if (MarkedPositionsManager.getManager(player).teleporters().stream()
                 .noneMatch(e -> e.pos().equals(pos) && e.dimension().equals(level.dimension()))) return;
+        if (BE.getSelectedPos().equals(GZERO)) return;
         if (player.isShiftKeyDown()) {
-            ServerLevel destination = player.getServer().getLevel(BE.getSelectedPos().dimension());
+            var destination = player.getServer().getLevel(BE.getSelectedPos().dimension());
             if (destination == null) return;
-            player.changeDimension(new DimensionTransition(destination, pos.getCenter(), player.getDeltaMovement(),
-                    player.getYRot(), player.getXRot(), DimensionTransition.PLAY_PORTAL_SOUND));
+            player.changeDimension(new DimensionTransition(destination, BE.getSelectedPos().pos().getCenter(),
+                    player.getDeltaMovement(), player.getYRot(), player.getXRot(), DimensionTransition.PLAY_PORTAL_SOUND));
         }
     }
 
