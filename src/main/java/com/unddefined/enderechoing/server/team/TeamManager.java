@@ -149,11 +149,17 @@ public final class TeamManager {
         boolean shared = false;
         for (UUID memberId : team.members()) {
             if (memberId.equals(sharer.getUUID())) continue;
-            ServerPlayer member = sharer.server.getPlayerList().getPlayer(memberId);
+            var member = sharer.server.getPlayerList().getPlayer(memberId);
             if (member == null) continue;
 
-            MarkedPositionsManager memberManager = MarkedPositionsManager.getManager(member);
+            var memberManager = MarkedPositionsManager.getManager(member);
             memberManager.addMarkedPosition(M.dimension(), M.pos(), M.name(), M.iconIndex(), M.teleporterBound());
+            // 绑定在传送点上的路径点：接收方也补登记，否则这个点只有分享者能用
+            if (M.teleporterBound()) {
+                var level = sharer.server.getLevel(M.dimension());
+                if (level != null && memberManager.isTeleporter(level, M.pos()))
+                    memberManager.addTeleporter(level, M.pos());
+            }
             member.setData(EE_PEARL_AMOUNT,member.getData(EE_PEARL_AMOUNT) - 1);
             shared = true;
         }

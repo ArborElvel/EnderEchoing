@@ -21,6 +21,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import java.util.List;
 
 import static com.unddefined.enderechoing.server.registry.DataRegistry.POSITION;
+import static com.unddefined.enderechoing.server.registry.DataRegistry.TBOUND;
 import static com.unddefined.enderechoing.server.registry.ItemRegistry.ENDER_ECHOING_PEARL;
 import static net.minecraft.client.gui.screens.Screen.hasShiftDown;
 import static net.minecraft.core.component.DataComponents.CUSTOM_NAME;
@@ -63,6 +64,7 @@ public class WaypointList extends ContainerObjectSelectionList<WaypointList.Wayp
             screen.getMenu().ee_pearl_amount--;
             var pearl = new ItemStack(ENDER_ECHOING_PEARL.get(), 1);
             pearl.set(POSITION.get(), new GlobalPos(M.dimension(), M.pos()));
+            pearl.set(TBOUND.get(), M.teleporterBound());
             pearl.set(CUSTOM_NAME, Component.literal(M.name()));
             screen.getMenu().givePlayerPearl(pearl);
         });

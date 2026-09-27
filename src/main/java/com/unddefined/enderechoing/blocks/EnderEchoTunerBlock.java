@@ -104,6 +104,7 @@ public class EnderEchoTunerBlock extends Block implements EntityBlock {
         if (hand != InteractionHand.MAIN_HAND) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         if (stack.is(ENDER_ECHOING_PEARL.get())) {
             var entityData = stack.get(ENTITY);
+            var manager = MarkedPositionsManager.getManager(player);
             if (entityData != null && !entityData.playerId().equals(player.getUUID())) {
                 if (player instanceof ServerPlayer inviter) {
                     var result = TeamManager.invite(inviter.server, inviter.getUUID(), entityData.playerId());
@@ -129,8 +130,12 @@ public class EnderEchoTunerBlock extends Block implements EntityBlock {
                 return ItemInteractionResult.SUCCESS;
             }
             var stackPos = stack.get(POSITION);
-            boolean result = stackPos != null && MarkedPositionsManager.getManager(player)
-                    .addMarkedPosition(stackPos.dimension(), stackPos.pos(), stack.get(CUSTOM_NAME).getString(), player.getData(SELECTED_TUNER_TAB), Boolean.TRUE.equals(stack.get(TBOUND)));
+            boolean result = stackPos != null && manager.addMarkedPosition(stackPos.dimension(), stackPos.pos(), stack.get(CUSTOM_NAME).getString(), player.getData(SELECTED_TUNER_TAB), Boolean.TRUE.equals(stack.get(TBOUND)));
+            // 凭证珍珠：插入时给接收方补登记，坐标需仍是传送点方块
+            if (result && Boolean.TRUE.equals(stack.get(TBOUND))) {
+                var S = player.getServer() == null ? null : player.getServer().getLevel(stackPos.dimension());
+                if (S != null && manager.isTeleporter(S, stackPos.pos())) manager.addTeleporter(S, stackPos.pos());
+            }
             player.setData(EE_PEARL_AMOUNT, player.getData(EE_PEARL_AMOUNT) + stack.getCount() - (result ? 1 : 0));
             stack.shrink(stack.getCount());
             return ItemInteractionResult.SUCCESS;

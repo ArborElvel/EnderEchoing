@@ -1,7 +1,6 @@
 package com.unddefined.enderechoing.items;
 
 import com.unddefined.enderechoing.Config;
-import com.unddefined.enderechoing.blocks.entity.EnderEchoicResonatorBlockEntity;
 import com.unddefined.enderechoing.client.model.item.EnderEchoingCoreModel;
 import com.unddefined.enderechoing.client.renderer.item.EnderEchoingCoreRenderer;
 import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
@@ -157,6 +156,7 @@ public class EnderEchoingCore extends Item implements GeoItem {
         var itemStack = player.getItemInHand(hand);
         var manager = MarkedPositionsManager.getManager(player);
         var playerList = Utils.getNearEchoPlayers(level, player);
+        if (level.isClientSide()) return InteractionResultHolder.fail(itemStack);
 
         if (!player.isShiftKeyDown()) {
             if (player instanceof ServerPlayer S) {
@@ -224,19 +224,16 @@ public class EnderEchoingCore extends Item implements GeoItem {
             }
         } else if (player.getData(EE_PEARL_AMOUNT.get()) > 0 || player.getInventory().hasAnyMatching(stack ->
                 stack.getItem() == ItemRegistry.ENDER_ECHOING_PEARL.get() && stack.get(CUSTOM_NAME) == null)) {
-            boolean A = level.getBlockEntity(player.blockPosition()) instanceof EnderEchoicResonatorBlockEntity;
-            boolean B = player.getData(EE_PEARL_AMOUNT.get()) > 0;
-            String name = A ? (B ? ">÷<" : "><") : (B ? "÷" : "");
-            if (A) manager.teleporters().stream().filter(e -> e.dimension().equals(level.dimension()))
-                    .filter(e -> e.pos().equals(player.blockPosition())).findFirst()
-                    .ifPresentOrElse(e -> {
-                    }, () -> {
-                        manager.teleporters().add(new MarkedPositionsManager.Teleporters(new GlobalPos(level.dimension(), player.blockPosition())));
-                        player.displayClientMessage(Component.translatable("new_resonator_added"), true);
-                    });
-
-            if (!level.isClientSide()) PacketDistributor.sendToPlayer((ServerPlayer) player, new OpenEditScreenPacket(name, player.blockPosition()));
-            player.setData(EE_PEARL_POSITION.get(), player.blockPosition());
+            String name = (player.getData(EE_PEARL_AMOUNT.get()) > 0 ? "÷" : "");
+            var pos = player.blockPosition();
+            // 未登记的传送点：手里持有指向该点的 TBOUND 珍珠时允许补登记，否则拒绝
+            boolean hasnt = manager.checkTeleporter(level, pos) && !EnderEchoingPearl.tryRebindTeleporter(player, level, pos);
+            if (hasnt) {
+                player.displayClientMessage(Component.translatable("item.enderechoing.ender_echoing_core.reject"), true);
+                return InteractionResultHolder.consume(itemStack);
+            }
+            if (!level.isClientSide()) PacketDistributor.sendToPlayer((ServerPlayer) player, new OpenEditScreenPacket(name, pos));
+            player.setData(EE_PEARL_POSITION.get(), pos);
         } else player.displayClientMessage(Component.translatable("pearl_not_enough"), true);
 
         return InteractionResultHolder.consume(itemStack);

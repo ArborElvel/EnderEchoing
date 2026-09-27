@@ -11,7 +11,7 @@
   "item.enderechoing.ender_echo_compass": "Ender Echo Compass",
   "item.enderechoing.echo_druse": "Echo Druse",
   "item.enderechoing.calibrated_sculk_shrieker": "Calibrated Sculk Shrieker",
-  "item.enderechoing.ender_echoing_core.no_resonator": "No resonator found!",
+  "item.enderechoing.ender_echoing_core.reject": "This place is not a registered Ender Echo teleporter, cannot set a waypoint",
   "item.enderechoing.ender_echoing_pearl": "Ender Echoing Pearl",
   "item.enderechoing.ender_echoing_eye": "Ender Echoing Eye",
   "item.enderechoing.ender_echoing_pearl.position": "Position: %s, %s",

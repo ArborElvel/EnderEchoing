@@ -54,9 +54,16 @@ public class EnderEchoTuneChamber extends Item implements GeoItem {
 
     private void addPearls(Player player, ItemStack other) {
         var stackPos = other.get(POSITION);
-        boolean result = stackPos != null && MarkedPositionsManager.getManager(player)
-                .addMarkedPosition(stackPos.dimension(), stackPos.pos(), other.get(CUSTOM_NAME).getString(),
-                        0, Boolean.TRUE.equals(other.get(TBOUND)));
+        boolean bound = Boolean.TRUE.equals(other.get(TBOUND));
+        var manager = MarkedPositionsManager.getManager(player);
+        boolean result = stackPos != null && manager.addMarkedPosition(stackPos.dimension(), stackPos.pos(),
+                other.get(CUSTOM_NAME).getString(), 0, bound);
+        // 分享过来的凭证珍珠：接收方插进调谐腔时一并补登记，否则这个点只有分享者能用
+        if (result && bound) {
+            var level = player.getServer() == null ? null : player.getServer().getLevel(stackPos.dimension());
+            if (level != null && manager.isTeleporter(level, stackPos.pos()))
+                manager.addTeleporter(level, stackPos.pos());
+        }
         player.setData(EE_PEARL_AMOUNT, player.getData(EE_PEARL_AMOUNT) + other.getCount() - (result ? 1 : 0));
         other.shrink(other.getCount());
     }

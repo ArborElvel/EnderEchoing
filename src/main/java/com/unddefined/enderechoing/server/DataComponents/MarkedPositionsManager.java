@@ -2,6 +2,8 @@ package com.unddefined.enderechoing.server.DataComponents;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import com.unddefined.enderechoing.blocks.entity.EnderEchoicResonatorBlockEntity;
+import com.unddefined.enderechoing.blocks.entity.WarpPlatformBlockEntity;
 import com.unddefined.enderechoing.server.registry.DataRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -24,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 public record MarkedPositionsManager(List<MarkedPositionsManager.Teleporters> teleporters,
@@ -43,8 +46,23 @@ public record MarkedPositionsManager(List<MarkedPositionsManager.Teleporters> te
     }
 
     public void addTeleporter(Level level, BlockPos pos) {
-        teleporters.add(new MarkedPositionsManager.Teleporters(new GlobalPos(level.dimension(), pos)));
+        var T = new MarkedPositionsManager.Teleporters(new GlobalPos(level.dimension(), pos));
+        teleporters.stream().filter(e-> e.equals(T)).findFirst()
+                .ifPresentOrElse(e-> {}, () -> teleporters.add(T));
         checkBounds();
+    }
+
+    public boolean isTeleporter(Level level, BlockPos pos) {
+        var B = level.getBlockEntity(pos);
+        return B instanceof EnderEchoicResonatorBlockEntity || B instanceof WarpPlatformBlockEntity;
+    }
+
+    public boolean checkTeleporter(Level level, BlockPos pos) {
+        AtomicBoolean flag = new AtomicBoolean(false);
+        teleporters.stream().filter(e -> e.dimension().equals(level.dimension()))
+                .filter(e -> e.pos().equals(pos)).findFirst()
+                .ifPresentOrElse(e -> {}, () -> flag.set(true));
+        return isTeleporter(level, pos) && flag.get();
     }
 
     public boolean addMarkedPosition(ResourceKey<Level> dimension, BlockPos pos, String name, int iconIndex, boolean teleporterBound) {

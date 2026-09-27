@@ -11,7 +11,7 @@
   "item.enderechoing.ender_echo_compass": "回响追溯指针",
   "item.enderechoing.echo_druse": "回响晶簇",
   "item.enderechoing.calibrated_sculk_shrieker": "校频幽匿尖啸体",
-  "item.enderechoing.ender_echoing_core.no_resonator": "No resonator found!",
+  "item.enderechoing.ender_echoing_core.reject": "此处并非登记过的末影回响传送点，无法设置路径点",
   "item.enderechoing.ender_echoing_pearl": "末影回响珍珠",
   "item.enderechoing.ender_echoing_eye": "末影回响之眼",
   "item.enderechoing.ender_echoing_pearl.position": "位于: %s, %s",

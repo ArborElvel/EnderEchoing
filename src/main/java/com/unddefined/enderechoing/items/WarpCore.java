@@ -1,6 +1,5 @@
 package com.unddefined.enderechoing.items;
 
-import com.unddefined.enderechoing.blocks.entity.EnderEchoicResonatorBlockEntity;
 import com.unddefined.enderechoing.client.gui.TunerMenu;
 import com.unddefined.enderechoing.client.model.item.WarpCoreModel;
 import com.unddefined.enderechoing.client.renderer.item.WarpCoreRenderer;
@@ -9,6 +8,7 @@ import com.unddefined.enderechoing.network.packet.OpenEditScreenPacket;
 import com.unddefined.enderechoing.network.packet.RenderEchoNamesPacket;
 import com.unddefined.enderechoing.network.packet.SetEchoSoundingPosPacket;
 import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
+import com.unddefined.enderechoing.server.registry.ItemRegistry;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -131,6 +131,9 @@ public class WarpCore extends Item implements GeoItem {
     @Override
     public @NotNull InteractionResultHolder<ItemStack> use(@NotNull Level level, @NotNull Player player, @NotNull InteractionHand hand) {
         var stack = player.getItemInHand(hand);
+        var manager = MarkedPositionsManager.getManager(player);
+        if (level.isClientSide()) return InteractionResultHolder.fail(stack);
+
         if (!player.isShiftKeyDown()) {
             if (player instanceof ServerPlayer S) S.openMenu(new MenuProvider() {
                 @Override
@@ -149,18 +152,18 @@ public class WarpCore extends Item implements GeoItem {
                     if (menu instanceof TunerMenu t) t.writeClientSideData(buf, new GlobalPos(level.dimension(), player.blockPosition()), true);
                 }
             });
-        } else if (player.getData(EE_PEARL_AMOUNT) > 0 || player.getInventory().hasAnyMatching(s ->
-                s.getItem() == ENDER_ECHOING_PEARL.get() && s.get(CUSTOM_NAME) == null)) {
-            boolean A = level.getBlockEntity(player.blockPosition()) instanceof EnderEchoicResonatorBlockEntity;
-            boolean B = player.getData(EE_PEARL_AMOUNT) > 0;
-            var manager = MarkedPositionsManager.getManager(player);
-            String name = A ? (B ? ">÷<" : "><") : (B ? "÷" : "");
-            if (A) manager.teleporters().stream().filter(e -> e.dimension().equals(level.dimension()))
-                    .filter(e -> e.pos().equals(player.blockPosition())).findFirst()
-                    .ifPresent(e -> manager.teleporters().add(new MarkedPositionsManager.Teleporters(new GlobalPos(level.dimension(), player.blockPosition()))));
-
-            if (!level.isClientSide()) PacketDistributor.sendToPlayer((ServerPlayer) player, new OpenEditScreenPacket(name, player.blockPosition()));
-            player.setData(EE_PEARL_POSITION.get(), player.blockPosition());
+        } else if (player.getData(EE_PEARL_AMOUNT.get()) > 0 || player.getInventory().hasAnyMatching(i ->
+                i.getItem() == ItemRegistry.ENDER_ECHOING_PEARL.get() && i.get(CUSTOM_NAME) == null)) {
+            String name = (player.getData(EE_PEARL_AMOUNT.get()) > 0 ? "÷" : "");
+            var pos = player.blockPosition();
+            // 未登记的传送点：手里持有指向该点的 TBOUND 珍珠时允许补登记，否则拒绝
+            boolean hasnt = manager.checkTeleporter(level, pos) && !EnderEchoingPearl.tryRebindTeleporter(player, level, pos);
+            if (hasnt) {
+                player.displayClientMessage(Component.translatable("item.enderechoing.ender_echoing_core.reject"), true);
+                return InteractionResultHolder.consume(stack);
+            }
+            if (!level.isClientSide()) PacketDistributor.sendToPlayer((ServerPlayer) player, new OpenEditScreenPacket(name, pos));
+            player.setData(EE_PEARL_POSITION.get(), pos);
         } else player.displayClientMessage(Component.translatable("pearl_not_enough"),true);
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
     }
