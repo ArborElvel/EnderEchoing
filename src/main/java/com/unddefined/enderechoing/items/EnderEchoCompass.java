@@ -1,6 +1,5 @@
 package com.unddefined.enderechoing.items;
 
-import com.unddefined.enderechoing.Config;
 import com.unddefined.enderechoing.blocks.entity.EnderEchoTunerBlockEntity;
 import com.unddefined.enderechoing.blocks.entity.EnderEchoicResonatorBlockEntity;
 import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
@@ -120,13 +119,13 @@ public class EnderEchoCompass extends Item {
 
     public @NotNull ItemStack finishUsingItem(@NotNull ItemStack stack, @NotNull Level level, @NotNull LivingEntity livingEntity) {
         if (level instanceof ServerLevel && livingEntity instanceof ServerPlayer player) {
+            player.getCooldowns().addCooldown(this, 60 * 20);
+
             var pos = player.getLastDeathLocation().orElse(null);
             if (pos == null) return stack;
 
             if (!level.dimension().equals(pos.dimension()) || !(level.getBlockEntity(player.blockPosition().above(2)) instanceof EnderEchoTunerBlockEntity E && E.checkMultiblock()))
                 return stack;
-
-            player.getCooldowns().addCooldown(this, 60 * 20);
         }
         return stack;
     }
