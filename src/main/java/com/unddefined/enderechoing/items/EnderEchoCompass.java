@@ -1,5 +1,6 @@
 package com.unddefined.enderechoing.items;
 
+import com.unddefined.enderechoing.Config;
 import com.unddefined.enderechoing.blocks.entity.EnderEchoTunerBlockEntity;
 import com.unddefined.enderechoing.blocks.entity.EnderEchoicResonatorBlockEntity;
 import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
@@ -125,13 +126,7 @@ public class EnderEchoCompass extends Item {
             if (!level.dimension().equals(pos.dimension()) || !(level.getBlockEntity(player.blockPosition().above(2)) instanceof EnderEchoTunerBlockEntity E && E.checkMultiblock()))
                 return stack;
 
-            // 消耗一个没有保存数据的珍珠
-            if (player.getData(EE_PEARL_AMOUNT.get()) > 0)
-                player.setData(EE_PEARL_AMOUNT.get(), player.getData(EE_PEARL_AMOUNT.get()) - 1);
-            else player.getInventory().clearOrCountMatchingItems(itemStack ->
-                    itemStack.getItem() == ItemRegistry.ENDER_ECHOING_PEARL.get() &&
-                            itemStack.get(CUSTOM_NAME) == null, 1, player.inventoryMenu.getCraftSlots());
-            return stack;
+            player.getCooldowns().addCooldown(this, 60 * 20);
         }
         return stack;
     }

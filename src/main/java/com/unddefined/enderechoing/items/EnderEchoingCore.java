@@ -165,6 +165,9 @@ public class EnderEchoingCore extends Item implements GeoItem {
                 // 检查玩家是否发光，如果发光则无法使用
                 if (S.isCurrentlyGlowing()) return InteractionResultHolder.fail(itemStack);
                 var sculk_veil = new MobEffectInstance(SculkBorneBridge.veilEffect(), 20 * 3, 0, false, true);
+                // 费用由各分支自行设置，先清空上一次的残留值
+                PlayerState state = playerStates.computeIfAbsent(S.getUUID(), ignored -> new PlayerState());
+                state.cost = 0;
                 // 副手持有绑定到其他玩家的珍珠时，优先传送到该玩家的位置
                 var offhandPearl = player.getOffhandItem();
                 var boundPlayer = offhandPearl.get(ENTITY.get());
@@ -196,13 +199,43 @@ public class EnderEchoingCore extends Item implements GeoItem {
                     player.startUsingItem(hand);
                     return InteractionResultHolder.consume(itemStack);
                 }
+                // 副手持有回响追溯指针时，传送到指针绑定的位置，未绑定则传送至上次死亡位置
+                var offhandCompass = player.getOffhandItem();
+                if (offhandCompass.getItem() == ItemRegistry.ENDER_ECHO_COMPASS.get()) {
+                    var boundPos = offhandCompass.get(POSITION.get());
+                    boolean boundValid = boundPos != null
+                            && manager.teleporters().stream().anyMatch(t -> t.globalPos().equals(boundPos));
+                    // 绑定的传送点已被移除时清除绑定
+                    if (boundPos != null && !boundValid) {
+                        offhandCompass.remove(POSITION.get());
+                        offhandCompass.remove(CUSTOM_NAME);
+                    }
+                    var targetPos = boundValid ? boundPos : player.getLastDeathLocation().orElse(null);
+                    if (targetPos == null) return InteractionResultHolder.fail(itemStack);
+                    // 不可跨维度传送
+                    if (!targetPos.dimension().equals(level.dimension())) {
+                        S.displayClientMessage(Component.translatable("item.enderechoing.ender_echoing_core.cross_dimension"), true);
+                        return InteractionResultHolder.fail(itemStack);
+                    }
+                    // 渲染传送特效
+                    PacketDistributor.sendToPlayer(S, new SetEchoSoundingPosPacket(player.blockPosition()));
+                    PacketDistributor.sendToPlayer(S, new SetTeleportPosPacket(targetPos, true));
+                    player.addEffect(sculk_veil);
+                    playerList.forEach(e -> {
+                        e.addEffect(sculk_veil);
+                        PacketDistributor.sendToPlayer(e, new SetEchoSoundingPosPacket(player.blockPosition()));
+                    });
+                    if (level instanceof ServerLevel SL) triggerAnim(S, GeoItem.getOrAssignId(itemStack, SL), CONTROLLER_NAME, ANIM_USE);
+
+                    player.startUsingItem(hand);
+                    return InteractionResultHolder.consume(itemStack);
+                }
                 // 查找最近的EnderEchoicResonator方块
                 if (manager.teleporters().stream().filter(e -> e.dimension().equals(level.dimension())).toList().isEmpty())
                     return InteractionResultHolder.fail(itemStack);
                 var nearestTeleporterPos = manager.getNearestTeleporter(level, player.blockPosition());
                 // 检查玩家是否有空白末影回响珍珠
                 int D = EECORE_TP_DISTANCE.get();
-                PlayerState state = playerStates.computeIfAbsent(S.getUUID(), ignored -> new PlayerState());
                 int cost = (int) Math.round(Math.sqrt(nearestTeleporterPos.pos().distSqr(player.blockPosition())) / D);
                 if (cost < 1) cost = 1;
                 state.cost = cost;
@@ -269,6 +302,10 @@ public class EnderEchoingCore extends Item implements GeoItem {
 
             // 设置冷却时间
             player.getCooldowns().addCooldown(this, Config.ENDER_ECHOING_CORE_COOLDOWN.get() * 20);
+            var offhandCompass = player.getOffhandItem().getItem();
+            if (offhandCompass.equals(ItemRegistry.ENDER_ECHO_COMPASS.get()))
+                player.getCooldowns().addCooldown(offhandCompass, 60 * 20);
+
             state.cost = 0;
         }
         return stack;
