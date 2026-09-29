@@ -1,6 +1,7 @@
 package com.unddefined.enderechoing.blocks.entity;
 
 import com.unddefined.enderechoing.server.registry.BlockEntityRegistry;
+import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.HolderLookup;
@@ -39,6 +40,9 @@ public class WarpPlatformBlockEntity  extends BlockEntity implements GeoBlockEnt
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, WarpPlatformBlockEntity blockEntity) {
+        // 每秒让 sculkborne 判定一次：徘徊者有没有极小概率出现在仪器上
+        if (!level.isClientSide && level.getGameTime() % 20 == 0) SculkBorneBridge.deviceTick(level, pos);
+
         // 更新动画时间
         if (level.isClientSide) blockEntity.animationTime += 1;
 

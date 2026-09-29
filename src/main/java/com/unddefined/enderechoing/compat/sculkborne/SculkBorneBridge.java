@@ -1,6 +1,7 @@
 package com.unddefined.enderechoing.compat.sculkborne;
 
 import com.mojang.logging.LogUtils;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -34,6 +35,14 @@ public final class SculkBorneBridge {
 
     private static Method teleportHook;
     private static boolean teleportHookUnavailable = false;
+
+    /** sculkborne 里“徘徊者极小概率出现在末影回响仪器上”的钩子，反射调用，缺 mod 或方法时静默跳过。 */
+    private static final String DEVICE_HOOK_CLASS =
+            "com.unddefined.sculkborne.compat.enderechoing.EnderEchoingDeviceHooks";
+    private static final String DEVICE_HOOK_METHOD = "onDeviceTick";
+
+    private static Method deviceHook;
+    private static boolean deviceHookUnavailable = false;
 
     public static boolean isLoaded() {
         return ModList.get().isLoaded(MOD_ID);
@@ -113,6 +122,48 @@ public final class SculkBorneBridge {
             return teleportHook;
         } catch (ReflectiveOperationException | LinkageError e) {
             teleportHookUnavailable = true;
+
+            return null;
+        }
+    }
+
+    /**
+     * 末影回响仪器的每秒判定：让 sculkborne 按自己的规则决定要不要在仪器上出现一只徘徊者。
+     *
+     * <p>只要仪器处于加载状态，每个仪器每秒调用一次本方法（见各仪器 BlockEntity 的 tick）；
+     * 概率、短暂停留以及“没有目标就瞬移消失”都在 sculkborne 那边处理。
+     * sculkborne 未安装或版本不匹配时什么也不做。
+     *
+     * @param level 仪器所在维度，客户端维度直接忽略
+     * @param pos   仪器所在的方块位置
+     */
+    public static void deviceTick(Level level, BlockPos pos) {
+        if (!isLoaded() || deviceHookUnavailable) return;
+        if (level == null || level.isClientSide) return;
+
+        Method method = deviceHook;
+
+        if (method == null) {
+            method = resolveDeviceHook();
+            if (method == null) return;
+        }
+
+        try {
+            method.invoke(null, level, pos);
+        } catch (ReflectiveOperationException e) {
+            deviceHookUnavailable = true;
+            LOGGER.error("sculkborne failed to handle an EnderEchoing device tick", e);
+        }
+    }
+
+    private static Method resolveDeviceHook() {
+        try {
+            deviceHook = Class.forName(DEVICE_HOOK_CLASS)
+                    .getMethod(DEVICE_HOOK_METHOD, Level.class, BlockPos.class);
+
+            return deviceHook;
+        } catch (ReflectiveOperationException | LinkageError e) {
+            deviceHookUnavailable = true;
 
             return null;
         }

@@ -2,6 +2,7 @@ package com.unddefined.enderechoing.blocks.entity;
 
 import com.mojang.logging.LogUtils;
 import com.unddefined.enderechoing.blocks.EnderEchoTunerBlock;
+import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
 import com.unddefined.enderechoing.server.registry.BlockEntityRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -48,6 +49,9 @@ public class EnderEchoTunerBlockEntity extends BlockEntity implements GeoBlockEn
 
     public static void tick(Level level, BlockPos pos, BlockState state, EnderEchoTunerBlockEntity blockEntity) {
         float offset = state.getValue(EnderEchoTunerBlock.FACING) == Direction.DOWN ? 0.7f : 0;
+
+        // 每秒让 sculkborne 判定一次：徘徊者有没有极小概率出现在仪器上
+        if (!level.isClientSide && level.getGameTime() % 20 == 0) SculkBorneBridge.deviceTick(level, pos);
 
         //粒子效果
         if (level.isClientSide && level.getRandom().nextFloat() < 0.15) {

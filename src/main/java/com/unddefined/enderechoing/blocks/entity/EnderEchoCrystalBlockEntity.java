@@ -1,6 +1,7 @@
 package com.unddefined.enderechoing.blocks.entity;
 
 import com.unddefined.enderechoing.server.registry.BlockEntityRegistry;
+import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -43,6 +44,10 @@ public class EnderEchoCrystalBlockEntity extends BlockEntity implements GeoBlock
 
     public static void tick(Level level, BlockPos pos, BlockState state, EnderEchoCrystalBlockEntity self) {
         if (level == null || level.isClientSide) return;
+
+        // 每秒让 sculkborne 判定一次：徘徊者有没有极小概率出现在仪器上
+        if (level.getGameTime() % 20 == 0) SculkBorneBridge.deviceTick(level, pos);
+
         if (self.playerUUID == null || self.playerUUID.equals(zeroUUID)) return;
         var player = level.getPlayerByUUID(self.playerUUID);
         var D = EECrystal_HEAL_DISTANCE.get();
