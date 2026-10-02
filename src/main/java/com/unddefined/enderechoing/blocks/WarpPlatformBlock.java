@@ -106,6 +106,7 @@ public class WarpPlatformBlock extends Block implements EntityBlock {
         level.getServer().getPlayerList().getPlayers().forEach(player -> {
             var M = player.getData(DataRegistry.MARKED_POSITIONS_CACHE.get());
             M.teleporters().removeIf(e -> e.dimension().equals(level.dimension()) && e.pos().equals(pos));
+            M.checkBounds();
         });
         super.onRemove(state, level, pos, newState, movedByPiston);
     }
