@@ -30,7 +30,11 @@ public class ResonatorNameRenderer {
     @SubscribeEvent
     public static void renderPositionName(RenderLevelStageEvent event) {
         if (posName.isEmpty()) return;
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) return;
+        // 名字写进的是共享 buffer，之后只要有人换 RenderType，先前写入的批次就会被立刻画掉。
+        // 放在 AFTER_ENTITIES 时，后面渲染的告示牌/头颅/尖啸体等方块实体模型会盖在文字上
+        // （Iris 的分批渲染会把文字排到最后，所以只有原版下才看得到这个问题）。
+        // 改到方块实体之后再写，文字才会排在方块实体几何之后。
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES) return;
         PoseStack poseStack = event.getPoseStack();
         var camPos = mc.gameRenderer.getMainCamera().getPosition();
         for (var entry : posName.entrySet()) {
