@@ -18,7 +18,8 @@ import software.bernie.geckolib.renderer.layer.AutoGlowingGeoLayer;
  * 而 1.21 的 MultiBufferSource 按 RenderType 复用共享批次、只在换类型或批次结束时 flush，
  * 同一件物品在同一帧被渲染多次（掉落的 chamber + tunerBlock 里的 chamber）时，
  * 发光批次可能被留成陈旧批次而始终不画出来。
- * 这里用自己的 ByteBufferBuilder 立即绘制：顺序固定为“发光层 → 基础模型 → core”，也不受共享批次状态影响。
+ * 这里用自己的 ByteBufferBuilder 立即绘制：保证发光层排在外壳之前，也不受共享批次状态影响；
+ * 同样被外壳包住、需要更早落地的骨骼（core）由各自的渲染器处理，见各 core 渲染器里的注释。
  */
 public class AutoGlowingBeforeModelLayer<T extends GeoAnimatable> extends AutoGlowingGeoLayer<T> {
 
