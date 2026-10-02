@@ -1,0 +1,15 @@
+{
+  "vertex": "enderechoing:warp_core_portal",
+  "fragment": "enderechoing:warp_core_portal",
+  "samplers": [
+    { "name": "Sampler0" },
+    { "name": "Sampler1" }
+  ],
+  "uniforms": [
+    { "name": "ModelViewMat", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+    { "name": "ProjMat", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+    { "name": "GameTime", "type": "float", "count": 1, "values": [ 0.0 ] },
+    { "name": "TintColor", "type": "float", "count": 3, "values": [ 0.352941, 0.164706, 0.301961 ] },
+    { "name": "EndPortalLayers", "type": "int", "count": 1, "values": [ 15 ] }
+  ]
+}
