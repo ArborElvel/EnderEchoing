@@ -13,6 +13,8 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.alchemy.Potion;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.registries.*;
 
@@ -37,8 +39,20 @@ public final class CompatSculkRegistry {
     public static final DeferredItem<EchoDruse> ECHO_DRUSE = ITEMS.registerItem("echo_druse", EchoDruse::new);
     public static final DeferredBlock<EchoDruseBlock> ECHO_DRUSE_BLOCK =
             BLOCKS.register("echo_druse_block", EchoDruseBlock::new);
-    public static final DeferredItem<BlockItem> ECHO_DRUSE_BLOCK_ITEM =
-            ITEMS.registerSimpleBlockItem("echo_druse_block", ECHO_DRUSE_BLOCK);
+
+    public static final DeferredItem<BlockItem> ECHO_DRUSE_STAGE1_ITEM = registerEchoDruse("echo_druse_stage1", 1);
+    public static final DeferredItem<BlockItem> ECHO_DRUSE_STAGE2_ITEM = registerEchoDruse("echo_druse_stage2", 2);
+    public static final DeferredItem<BlockItem> ECHO_DRUSE_STAGE3_ITEM = registerEchoDruse("echo_druse_stage3", 3);
+    public static final DeferredItem<BlockItem> ECHO_DRUSE_STAGE4_ITEM = registerEchoDruse("echo_druse_stage4", 4);
+    private static DeferredItem<BlockItem> registerEchoDruse(String name, int stage) {
+        return ITEMS.register(name, () -> new BlockItem(ECHO_DRUSE_BLOCK.get(), new Item.Properties()) {
+            @Override
+            public BlockState getPlacementState(BlockPlaceContext context) {
+                return ECHO_DRUSE_BLOCK.get().defaultBlockState().setValue(EchoDruseBlock.GROWTH_STAGE, stage);
+            }
+        });
+    }
+
     public static final DeferredItem<Item> RHYME_SHARD = ITEMS.registerSimpleItem("rhyme_shard", new Item.Properties()
             .rarity(Rarity.UNCOMMON).component(net.minecraft.core.component.DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true));
 
@@ -46,9 +60,7 @@ public final class CompatSculkRegistry {
             MOB_EFFECTS.register("sculk_veil", SculkVeilEffect::new);
     /** sculkborne 未加载时的发光药水副本：基础 3 分钟，发光时长可抵消影匿的黑暗积累 */
     public static final DeferredHolder<Potion, Potion> GLOWING =
-            POTIONS.register("glowing", () -> new Potion(
-                    new MobEffectInstance(MobEffects.GLOWING, 20 * 60 * 3)
-            ));
+            POTIONS.register("glowing", () -> new Potion(new MobEffectInstance(MobEffects.GLOWING, 20 * 60 * 3)));
 
     public static final Supplier<AttachmentType<Long>> SCULK_VEIL_START = ATTACHMENTS.register(
             "sculk_veil_start", () -> AttachmentType.builder(() -> -1L).serialize(Codec.LONG).build()

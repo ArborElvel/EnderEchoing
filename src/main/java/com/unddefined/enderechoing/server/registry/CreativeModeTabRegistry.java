@@ -33,7 +33,10 @@ public class CreativeModeTabRegistry {
                         if (CompatSculkRegistry.ACTIVE) {
                             output.accept(CompatSculkRegistry.RHYME_SHARD.get());
                             output.accept(CompatSculkRegistry.ECHO_DRUSE.get());
-                            output.accept(CompatSculkRegistry.ECHO_DRUSE_BLOCK_ITEM.get());
+                            output.accept(CompatSculkRegistry.ECHO_DRUSE_STAGE1_ITEM.get());
+                            output.accept(CompatSculkRegistry.ECHO_DRUSE_STAGE2_ITEM.get());
+                            output.accept(CompatSculkRegistry.ECHO_DRUSE_STAGE3_ITEM.get());
+                            output.accept(CompatSculkRegistry.ECHO_DRUSE_STAGE4_ITEM.get());
                             output.accept(CompatSculkRegistry.CALIBRATED_SCULK_SHRIEKER_ITEM.get());
                             output.accept(PotionContents.createItemStack(Items.POTION, CompatSculkRegistry.GLOWING));
                             output.accept(PotionContents.createItemStack(Items.SPLASH_POTION, CompatSculkRegistry.GLOWING));
