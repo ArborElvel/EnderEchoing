@@ -9,6 +9,7 @@ import com.unddefined.enderechoing.client.renderer.layer.WarpCorePortalLayer;
 import com.unddefined.enderechoing.client.shader.WarpCorePortalShaders;
 import com.unddefined.enderechoing.compat.iris.IrisCompat;
 import com.unddefined.enderechoing.items.WarpCore;
+import com.unddefined.enderechoing.ClientConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -36,8 +37,6 @@ public class WarpCoreRenderer extends GeoItemRenderer<WarpCore> {
     /** 两个周期的最小公倍数：先把游戏时间取模再转 float，长时间运行也不会因精度丢失而抖动。 */
     private static final long CYCLE_TICKS = 120L;
     /** 当前实际渲染出的描边颜色（ARGB32 打包）。 */
-    private static final int OUTER_OUTLINE_COLOR = FastColor.ARGB32.color(255, 90, 42, 77);
-    private static final int INNER_OUTLINE_COLOR = FastColor.ARGB32.color(255, 117, 10, 237);
 
     /** 开光影时 core 的 UV 展开范围：1 表示把 core 的模型 UV 拉伸到整张 end_portal.png。 */
     private static final float PORTAL_UV_SPAN = 0.5F;
@@ -93,10 +92,11 @@ public class WarpCoreRenderer extends GeoItemRenderer<WarpCore> {
 
     /** 把描边色作为星云染色传给自绘 shader：core 的星云与描边同色系。 */
     public static void applyPortalTint() {
+        int outer = ClientConfig.WARP_CORE_OUTER_OUTLINE_COLOR.get();
         WarpCorePortalShaders.setTintColor(
-                FastColor.ARGB32.red(OUTER_OUTLINE_COLOR) / 255F,
-                FastColor.ARGB32.green(OUTER_OUTLINE_COLOR) / 255F,
-                FastColor.ARGB32.blue(OUTER_OUTLINE_COLOR) / 255F);
+                FastColor.ARGB32.red(outer) / 255F,
+                FastColor.ARGB32.green(outer) / 255F,
+                FastColor.ARGB32.blue(outer) / 255F);
     }
 
     /** 基础层是否用的是自绘星云 shader（决定要不要叠光晕）。 */
@@ -187,14 +187,14 @@ public class WarpCoreRenderer extends GeoItemRenderer<WarpCore> {
         float pulse = (Mth.sin(time * (float) (Math.PI * 2) / PULSE_PERIOD_TICKS) + 1F) * 0.5F;
         OutlineRenderer.render(poseStack, model, "frame",
                 0.84F + 0.015F * (pulse * 2F - 1F),
-                modulateRgb(OUTER_OUTLINE_COLOR, 0.60F + 0.55F * pulse), 0.00F);
+                    modulateRgb(ClientConfig.WARP_CORE_OUTER_OUTLINE_COLOR.get(), 0.60F + 0.55F * pulse), 0.00F);
 
         // 内层：外扩波纹——每周期从基准位置向外扩一圈并淡出，亮度归零后再从头开始，所以看不到跳变。
         float progress = (time % RIPPLE_PERIOD_TICKS) / RIPPLE_PERIOD_TICKS;
         float fade = ((1F - progress) * (1F - progress));
         OutlineRenderer.render(poseStack, model, "frame",
                 0.74F + 0.12F * progress,
-                modulateRgb(INNER_OUTLINE_COLOR, fade * 1.2f), 0.00F);
+                    modulateRgb(ClientConfig.WARP_CORE_INNER_OUTLINE_COLOR.get(), fade * 1.2f), 0.00F);
     }
 
     /**

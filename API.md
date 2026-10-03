@@ -40,8 +40,14 @@ side = "BOTH"
 | `api.team` | `EnderEchoTeams`（`EnderEchoTeam` 快照） | 队伍查询、邀请、离队、队长票选、分享 |
 | `api.teleport` | `EnderEchoTeleports` | 传送前后事件的派发入口 |
 | `api.event` | 8 族事件 | 见下表 |
+| `client.api` | `EnderEchoClientData` | **客户端专有**：读取已同步的锚点、路径点名称与当前预览目的地 |
+| `client.api.event` | `EnderEchoClientEvent` | **客户端专有**：`AnchorSync` / `WaypointNamesSync` / `ResonatorNamesSync` / `TargetChanged` |
+| `client.api.render` | `EnderEchoClientRender` | **客户端专有**：`drawBoneOutline`（Geo 模型描边）、`drawEchoResponse`（回响响应波纹） |
 
 模组内部也走同一套入口，所以这些方法的可用性有自家代码兜底。
+
+`client.api` 与服务端 api 分开的原因：仓库约定客户端独有代码一律放在 `client/` 包下，
+这些类在 Dedicated Server 上不会被加载，依赖方必须放在 `Dist.CLIENT` 分支里引用。
 
 ## 事件总览
 
@@ -108,6 +114,45 @@ EnderEchoingApi.registerAnchor((level, pos) -> level.getBlockState(pos).is(YourB
 4. **注意副作用时机**：`Added` 类事件在数据写入后派发；`Pre` 在副作用之前派发，
    此时方块还没放、物品还没扣。
 5. **客户端类不可用**：`api` 包不依赖任何 `client` 类，可以在 Dedicated Server 上安全加载。
+6. **客户端事件**：`client.api.event` 下的事件只在客户端缓存被服务端更新时派发，
+   属于「客户端数据变了」的通知，不代表权威状态；监听方需要自己放在 `Dist.CLIENT` 分支里。
+
+## 外观：贴图、模型与颜色
+
+### 资源包可以直接覆盖
+
+以下内容都是固定路径、走资源管理器加载，资源包放同名文件即可替换：
+
+| 类别 | 路径 |
+| --- | --- |
+| 方块状态 / 模型 | `assets/enderechoing/blockstates/`、`assets/enderechoing/models/` |
+| 纹理 | `assets/enderechoing/textures/`（含 `textures/misc/wave.png`、`textures/misc/sonic_boom_<帧>.png`、`textures/misc/core_layer.png`、`textures/gui/`） |
+| GeckoLib 模型与动画 | `assets/enderechoing/geo/`、`assets/enderechoing/animations/`（按模型类里写的 asset id 取同名文件） |
+| 着色器 | `assets/enderechoing/shaders/`（`post/sculk_veil.json`、`program/sculk_veil.fsh`、`core/warp_core_portal.*`） |
+
+两点坑：回响水晶方块、谐振器、调谐器、折跃平台**共用** `calibrated_sculk_shrieker` 这个 asset id，
+换那张贴图会一起改；传送门绑定的是原版 `end_sky.png` / `end_portal.png`，覆盖它们也会影响原版末地传送门。
+
+### 客户端配置可以改的颜色
+
+`config/enderechoing-client.toml`，值写 ARGB 十六进制（例如 `0xFF8CF4E2`）：
+
+| 配置项 | 作用 | 默认值 |
+| --- | --- | --- |
+| `echo_wave_color` | 回响波纹普通颜色 | `0xFF2CCDB1` |
+| `echo_wave_highlight_color` | 回响波纹高亮颜色 | `0xFF8CF4E2` |
+| `echo_response_color` | 回响响应波纹颜色 | `0xFF8CF4E2` |
+| `waypoint_name_color` | 世界内路径点 / 谐振器名称文字颜色 | `0xFF8CF4E2` |
+| `warp_core_outer_outline_color` | 折跃核心外层描边（同时给传送门星云染色） | `0xFF5A2A4D` |
+| `warp_core_inner_outline_color` | 折跃核心内层描边 | `0xFF750AED` |
+
+### 仍是代码内固定的部分
+
+- 回响水晶的 13 通道调色板（与染料通道语义绑定）；
+- 影匿遮罩的 `MASK_SIZE` / `MASK_SCALE`（属于缓冲区尺寸，改它要重建资源）；
+- 界面里的文字与高亮颜色。
+
+这些要改目前只能改代码或 mixin；如果哪天有明确需求，再按上面的方式抽成配置。
 
 ## 版本与兼容
 

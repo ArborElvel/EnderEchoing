@@ -4,12 +4,12 @@ package com.unddefined.enderechoing.client.renderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.unddefined.enderechoing.EnderEchoing;
+import com.unddefined.enderechoing.ClientConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FastColor;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -74,7 +74,7 @@ public class ResonatorNameRenderer {
         poseStack.scale(screenScale, screenScale, screenScale);
         poseStack.scale(0.033f, 0.033f, 0.033f);
         mc.font.drawInBatch(Component.literal(name), -textWidth, 0,
-                FastColor.ABGR32.color(255, 140, 244, 226), false,
+                    ClientConfig.abgr(ClientConfig.WAYPOINT_NAME_COLOR, 255), false,
                 poseStack.last().pose(), bufferSource, Font.DisplayMode.SEE_THROUGH, 0, FULL_BLOCK
         );
     }

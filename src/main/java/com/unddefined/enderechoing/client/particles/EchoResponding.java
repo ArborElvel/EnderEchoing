@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.math.Axis;
+import com.unddefined.enderechoing.ClientConfig;
 import net.minecraft.Util;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -14,7 +15,6 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.FastColor;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import org.joml.Matrix4f;
@@ -74,7 +74,7 @@ public class EchoResponding {
         int frameIndex = frameCount - 1 - (ticks / frameDuration) % frameCount;
         VertexConsumer vc = bufferSource.getBuffer(RESPONDING.apply(
                 ResourceLocation.fromNamespaceAndPath("enderechoing", "textures/misc/sonic_boom_" + frameIndex + ".png")));
-        int color =  FastColor.ABGR32.color(255, 140, 244, 226);
+            int color = ClientConfig.abgr(ClientConfig.ECHO_RESPONSE_COLOR, 255);
         Matrix4f mat = poseStack.last().pose();
         // 绘制一个平面 quad，包含所有必需的顶点属性
         vc.addVertex(mat, -1f, -1f, 0f).setUv(0f, 0f).setColor(color)

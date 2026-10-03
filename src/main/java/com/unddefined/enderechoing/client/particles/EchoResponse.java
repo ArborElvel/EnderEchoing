@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.math.Axis;
+import com.unddefined.enderechoing.ClientConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -133,8 +134,12 @@ public class EchoResponse {
             }
             var vertexConsumer = bufferSource.getBuffer(WAVE_RENDER_TYPE);
             var matrix4f = poseStack.last().pose();
-            int color = isElementHovering ? FastColor.ABGR32.color((int) (alpha * 255), 140, 244, 226)
-                    : FastColor.ABGR32.color((int) (alpha * 255 * Math.max(0.1, (1 - (distance / 4096)))), 44, 205, 177);
+            int alphaByte = isElementHovering
+                    ? (int) (alpha * 255)
+                    : (int) (alpha * 255 * Math.max(0.1, (1 - (distance / 4096))));
+            int color = ClientConfig.abgr(isElementHovering
+                    ? ClientConfig.ECHO_WAVE_HIGHLIGHT_COLOR
+                    : ClientConfig.ECHO_WAVE_COLOR, alphaByte);
             // 绘制一个平面 quad，包含所有必需的顶点属性
             vertexConsumer.addVertex(matrix4f, -1f, -1f, 0f).setUv(0f, 0f).setColor(color)
                     .setOverlay(OverlayTexture.NO_OVERLAY).setLight(FULL_BRIGHT).setNormal(0f, 1f, 0f);
@@ -159,7 +164,7 @@ public class EchoResponse {
                     Component.literal(posName),
                     -textWidth,
                     0,
-                    FastColor.ABGR32.color(255, 140, 244, 226),
+                    ClientConfig.abgr(ClientConfig.WAYPOINT_NAME_COLOR, 255),
                     false,
                     poseStack.last().pose(),
                     bufferSource,
