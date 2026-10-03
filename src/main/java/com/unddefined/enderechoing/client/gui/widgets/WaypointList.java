@@ -1,9 +1,9 @@
 package com.unddefined.enderechoing.client.gui.widgets;
 
+import com.unddefined.enderechoing.api.waypoint.EnderEchoWaypoint;
 import com.unddefined.enderechoing.client.gui.screen.PositionEditScreen;
 import com.unddefined.enderechoing.client.gui.screen.TunerScreen;
 import com.unddefined.enderechoing.network.packet.TeleportRequestPacket;
-import com.unddefined.enderechoing.api.waypoint.EnderEchoWaypoint;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ContainerObjectSelectionList;
@@ -20,8 +20,8 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.List;
 
-import static com.unddefined.enderechoing.server.registry.DataRegistry.POSITION;
 import static com.unddefined.enderechoing.server.registry.DataRegistry.ANCHOR_BOUND;
+import static com.unddefined.enderechoing.server.registry.DataRegistry.POSITION;
 import static com.unddefined.enderechoing.server.registry.ItemRegistry.ENDER_ECHOING_PEARL;
 import static net.minecraft.client.gui.screens.Screen.hasShiftDown;
 import static net.minecraft.core.component.DataComponents.CUSTOM_NAME;
@@ -60,6 +60,7 @@ public class WaypointList extends ContainerObjectSelectionList<WaypointList.Wayp
         contextMenu.addItem("screen.enderechoing.rename",
                 () -> Minecraft.getInstance().setScreen(new PositionEditScreen(screen, M.name(), M.pos())));
 
+        if (!screen.getMenu().canWarp()){
         contextMenu.addItem("screen.enderechoing.copy", () -> {
             screen.getMenu().ee_pearl_amount--;
             var pearl = new ItemStack(ENDER_ECHOING_PEARL.get(), 1);
@@ -67,7 +68,7 @@ public class WaypointList extends ContainerObjectSelectionList<WaypointList.Wayp
             pearl.set(ANCHOR_BOUND.get(), M.anchorBound());
             pearl.set(CUSTOM_NAME, Component.literal(M.name()));
             screen.getMenu().givePlayerPearl(pearl);
-        });
+        });}
 
         contextMenu.addItem("screen.enderechoing.remove", () -> {
             contextMenu.addItem("screen.enderechoing.confirm_remove", () -> {
