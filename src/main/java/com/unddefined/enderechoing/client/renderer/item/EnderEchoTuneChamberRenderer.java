@@ -32,7 +32,7 @@ public class EnderEchoTuneChamberRenderer extends GeoItemRenderer<EnderEchoTuneC
      * <p>
      * 这里留在 preRender 是因为调谐腔的 core 是顶层骨骼、模型没有动画，自身变换即可定位；
      * 同时它必须排在发光层（letters 的 glowmask，写在 preRender 里）之前，否则不透明的 core
-     * 会把发光盖掉。回响核心 / 回响晶簇的 core 是动画骨骼的子节点，改用 traversal 内绘制
+     * 会把发光盖掉。回响核心 / 末影回响水晶的 core 是动画骨骼的子节点，改用 traversal 内绘制
      * （父级姿势与实体朝向要等 actuallyRender 才算好，提前画会晚一帧）。
      */
     @Override

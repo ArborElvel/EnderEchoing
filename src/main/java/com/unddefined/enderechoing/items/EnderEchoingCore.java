@@ -8,9 +8,11 @@ import com.unddefined.enderechoing.network.packet.OpenEditScreenPacket;
 import com.unddefined.enderechoing.network.packet.RenderEchoNamesPacket;
 import com.unddefined.enderechoing.network.packet.SetEchoSoundingPosPacket;
 import com.unddefined.enderechoing.network.packet.SetTeleportPosPacket;
-import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
+import com.unddefined.enderechoing.api.pearl.EnderEchoPearls;
 import com.unddefined.enderechoing.server.registry.ItemRegistry;
 import com.unddefined.enderechoing.util.Utils;
+import com.unddefined.enderechoing.api.anchor.EnderEchoAnchors;
+import com.unddefined.enderechoing.api.waypoint.EnderEchoWaypoints;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -47,6 +49,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 import static com.unddefined.enderechoing.Config.EECORE_TP_DISTANCE;
+import static com.unddefined.enderechoing.api.event.EnderEchoPearlEvent.Cause.*;
 import static com.unddefined.enderechoing.EnderEchoing.GZERO;
 import static com.unddefined.enderechoing.server.registry.BlockRegistry.ENDER_ECHO_CRYSTAL;
 import static com.unddefined.enderechoing.server.registry.DataRegistry.*;
@@ -135,9 +138,8 @@ public class EnderEchoingCore extends Item implements GeoItem {
         PacketDistributor.sendToPlayer(S, new SetEchoSoundingPosPacket(S.blockPosition()));
         if (state.tick < 24) return;
         int D = EECORE_TP_DISTANCE.get();
-        var manager = MarkedPositionsManager.getManager(S);
-        if (manager.teleporters().isEmpty() && manager.markedPositions().isEmpty()) return;
-        manager.markedPositions().stream().filter(e -> e.dimension().equals(level.dimension()))
+        if (EnderEchoAnchors.of(S).isEmpty() && EnderEchoWaypoints.of(S).isEmpty()) return;
+        EnderEchoWaypoints.of(S).stream().filter(e -> e.dimension().equals(level.dimension()))
                 .filter(e -> Math.sqrt(e.pos().distSqr(S.blockPosition())) < D * 4)
                 .forEach(e -> Map.put(e.pos(), e.name()));
         PacketDistributor.sendToPlayer(S, new RenderEchoNamesPacket(Map));
@@ -154,7 +156,6 @@ public class EnderEchoingCore extends Item implements GeoItem {
 
     public @NotNull InteractionResultHolder<ItemStack> use(@NotNull Level level, @NotNull Player player, @NotNull InteractionHand hand) {
         var itemStack = player.getItemInHand(hand);
-        var manager = MarkedPositionsManager.getManager(player);
         var playerList = Utils.getNearEchoPlayers(level, player);
         if (level.isClientSide()) return InteractionResultHolder.fail(itemStack);
 
@@ -204,8 +205,8 @@ public class EnderEchoingCore extends Item implements GeoItem {
                 if (offhandCompass.getItem() == ItemRegistry.ENDER_ECHO_COMPASS.get()) {
                     var boundPos = offhandCompass.get(POSITION.get());
                     boolean boundValid = boundPos != null
-                            && manager.teleporters().stream().anyMatch(t -> t.globalPos().equals(boundPos));
-                    // 绑定的传送点已被移除时清除绑定
+                            && EnderEchoAnchors.of(player).stream().anyMatch(t -> t.equals(boundPos));
+                    // 绑定的锚点已被移除时清除绑定
                     if (boundPos != null && !boundValid) {
                         offhandCompass.remove(POSITION.get());
                         offhandCompass.remove(CUSTOM_NAME);
@@ -231,12 +232,12 @@ public class EnderEchoingCore extends Item implements GeoItem {
                     return InteractionResultHolder.consume(itemStack);
                 }
                 // 查找最近的EnderEchoicResonator方块
-                if (manager.teleporters().stream().filter(e -> e.dimension().equals(level.dimension())).toList().isEmpty())
+                if (EnderEchoAnchors.positions(player, level).isEmpty())
                     return InteractionResultHolder.fail(itemStack);
-                var nearestTeleporterPos = manager.getNearestTeleporter(level, player.blockPosition());
+                var nearestAnchorPos = EnderEchoAnchors.nearest(player, level, player.blockPosition());
                 // 检查玩家是否有空白末影回响珍珠
                 int D = EECORE_TP_DISTANCE.get();
-                int cost = (int) Math.round(Math.sqrt(nearestTeleporterPos.pos().distSqr(player.blockPosition())) / D);
+                int cost = (int) Math.round(Math.sqrt(nearestAnchorPos.pos().distSqr(player.blockPosition())) / D);
                 if (cost < 1) cost = 1;
                 state.cost = cost;
                 if (!player.getInventory().hasAnyMatching(item ->
@@ -245,7 +246,7 @@ public class EnderEchoingCore extends Item implements GeoItem {
                     return InteractionResultHolder.fail(itemStack);
                 // 渲染传送特效
                 PacketDistributor.sendToPlayer(S, new SetEchoSoundingPosPacket(player.blockPosition()));
-                PacketDistributor.sendToPlayer(S, new SetTeleportPosPacket(nearestTeleporterPos, true));
+                PacketDistributor.sendToPlayer(S, new SetTeleportPosPacket(nearestAnchorPos, true));
                 player.addEffect(sculk_veil);
                 playerList.forEach(e -> {
                     e.addEffect(sculk_veil);
@@ -259,8 +260,9 @@ public class EnderEchoingCore extends Item implements GeoItem {
                 stack.getItem() == ItemRegistry.ENDER_ECHOING_PEARL.get() && stack.get(CUSTOM_NAME) == null)) {
             String name = (player.getData(EE_PEARL_AMOUNT.get()) > 0 ? "÷" : "");
             var pos = player.blockPosition();
-            // 未登记的传送点：手里持有指向该点的 TBOUND 珍珠时允许补登记，否则拒绝
-            boolean hasnt = manager.checkTeleporter(level, pos) && !EnderEchoingPearl.tryRebindTeleporter(player, level, pos);
+            // 未登记的锚点：手里持有指向该点的 ANCHOR_BOUND 珍珠时允许补登记，否则拒绝
+            boolean hasnt = EnderEchoAnchors.isUnregisteredAnchor(player, level, pos)
+                    && !EnderEchoingPearl.tryRebindAnchor(player, level, pos);
             if (hasnt) {
                 player.displayClientMessage(Component.translatable("item.enderechoing.ender_echoing_core.reject"), true);
                 return InteractionResultHolder.consume(itemStack);
@@ -290,12 +292,12 @@ public class EnderEchoingCore extends Item implements GeoItem {
             // 再次检查玩家是否有空白珍珠
             if (!player.getInventory().hasAnyMatching(itemStack ->
                     itemStack.getItem() == ItemRegistry.ENDER_ECHOING_PEARL.get() && itemStack.get(CUSTOM_NAME) == null)
-                    && player.getData(EE_PEARL_AMOUNT.get()) < cost) {
+                    && EnderEchoPearls.get(player) < cost) {
                 PacketDistributor.sendToPlayer(player, new SetEchoSoundingPosPacket(BlockPos.ZERO));
                 return stack;
             }
             // 消耗空白珍珠
-            if (player.getData(EE_PEARL_AMOUNT.get()) > 0) player.setData(EE_PEARL_AMOUNT.get(), player.getData(EE_PEARL_AMOUNT.get()) - cost);
+            if (EnderEchoPearls.get(player) > 0) EnderEchoPearls.add(player, -cost, TELEPORT);
             else player.getInventory().clearOrCountMatchingItems(itemStack ->
                     itemStack.getItem() == ItemRegistry.ENDER_ECHOING_PEARL.get() &&
                             itemStack.get(CUSTOM_NAME) == null, cost, player.inventoryMenu.getCraftSlots());

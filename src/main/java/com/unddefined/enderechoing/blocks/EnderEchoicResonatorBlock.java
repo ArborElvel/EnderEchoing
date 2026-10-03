@@ -3,14 +3,15 @@ package com.unddefined.enderechoing.blocks;
 import com.unddefined.enderechoing.blocks.entity.EnderEchoTunerBlockEntity;
 import com.unddefined.enderechoing.blocks.entity.EnderEchoicResonatorBlockEntity;
 import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
-import com.unddefined.enderechoing.network.packet.SendMarkedPositionNamesPacket;
-import com.unddefined.enderechoing.network.packet.SendSyncedTeleporterPositionsPacket;
+import com.unddefined.enderechoing.network.packet.SendWaypointNamesPacket;
+import com.unddefined.enderechoing.network.packet.SendSyncedAnchorPositionsPacket;
 import com.unddefined.enderechoing.network.packet.SetEchoSoundingPosPacket;
 import com.unddefined.enderechoing.network.packet.SetTeleportPosPacket;
-import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
 import com.unddefined.enderechoing.server.registry.BlockEntityRegistry;
 import com.unddefined.enderechoing.server.registry.DataRegistry;
 import com.unddefined.enderechoing.util.Utils;
+import com.unddefined.enderechoing.api.anchor.EnderEchoAnchors;
+import com.unddefined.enderechoing.api.waypoint.EnderEchoWaypoints;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.server.level.ServerLevel;
@@ -102,9 +103,7 @@ public class EnderEchoicResonatorBlock extends Block implements EntityBlock {
         if (level.getServer() == null) return;
         if (state.is(newState.getBlock())) return;
         level.getServer().getPlayerList().getPlayers().forEach(player -> {
-            var M = player.getData(DataRegistry.MARKED_POSITIONS_CACHE.get());
-            M.teleporters().removeIf(e -> e.dimension().equals(level.dimension()) && e.pos().equals(pos));
-            M.checkBounds();
+            EnderEchoAnchors.remove(player, level.dimension(), pos);
         });
         super.onRemove(state, level, pos, newState, movedByPiston);
     }
@@ -128,9 +127,8 @@ public class EnderEchoicResonatorBlock extends Block implements EntityBlock {
     public void stepOn(Level level, BlockPos pos, BlockState state, Entity entity) {
         if (!(entity instanceof ServerPlayer player)) return;
         if (entity.isCurrentlyGlowing()) return;
-        var manager = MarkedPositionsManager.getManager(player);
-        if (manager.teleporters().isEmpty() && manager.markedPositions().isEmpty()) return;
-        if (manager.teleporters().stream()
+        if (EnderEchoAnchors.of(player).isEmpty() && EnderEchoWaypoints.of(player).isEmpty()) return;
+        if (EnderEchoAnchors.of(player).stream()
                 .noneMatch(e -> e.pos().equals(pos) && e.dimension().equals(level.dimension()))) return;
         level.scheduleTick(pos, this, 40);
         if (!state.getValue(CoolDown)) return;
@@ -143,8 +141,8 @@ public class EnderEchoicResonatorBlock extends Block implements EntityBlock {
         player.addEffect(new MobEffectInstance(SculkBorneBridge.veilEffect(), state.getValue(CHARGED) ? 300 : 60));
         level.setBlock(pos, state.setValue(CoolDown, false).setValue(CHARGED, false), 3);
         //获取目的地名称
-        var posList = manager.getTeleporterPositions(level);
-        var map = manager.getMarkedTeleportersMap(level);
+        var posList = EnderEchoAnchors.positions(player, level);
+        var map = EnderEchoAnchors.boundWaypoints(player, level);
         var pearlList = player.getInventory().items.stream().filter(i -> i.is(ENDER_ECHOING_PEARL.get())).toList();
         pearlList.forEach(itemStack -> {
             var p = itemStack.get(DataRegistry.POSITION);
@@ -152,7 +150,7 @@ public class EnderEchoicResonatorBlock extends Block implements EntityBlock {
             if (p != null && n != null && p.dimension().equals(level.dimension()) && posList.contains(p.pos()))
                 map.put(p.pos(), n.getString());
         });
-        if (!map.isEmpty()) PacketDistributor.sendToPlayer(player, new SendMarkedPositionNamesPacket(map));
+        if (!map.isEmpty()) PacketDistributor.sendToPlayer(player, new SendWaypointNamesPacket(map));
 
         GlobalPos targetPos = null;
         var tuner = level.getBlockEntity(pos.above(2));
@@ -162,7 +160,7 @@ public class EnderEchoicResonatorBlock extends Block implements EntityBlock {
                 targetPos = B.getSelectedPos();
         // 传送
         if (targetPos != null) PacketDistributor.sendToPlayer(player, new SetTeleportPosPacket(targetPos, true));
-        else PacketDistributor.sendToPlayer(player, new SendSyncedTeleporterPositionsPacket(posList));
+        else PacketDistributor.sendToPlayer(player, new SendSyncedAnchorPositionsPacket(posList));
     }
 
     @Override

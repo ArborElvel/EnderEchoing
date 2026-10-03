@@ -1,5 +1,6 @@
 package com.unddefined.enderechoing.server;
 
+import com.unddefined.enderechoing.api.event.EnderEchoStructureEvent;
 import com.unddefined.enderechoing.server.DataComponents.VisitedStructures.VisitedStructure;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -17,6 +18,7 @@ import net.minecraft.world.level.levelgen.structure.StructureCheckResult;
 import net.minecraft.world.level.levelgen.structure.placement.ConcentricRingsStructurePlacement;
 import net.minecraft.world.level.levelgen.structure.placement.RandomSpreadStructurePlacement;
 import net.minecraft.world.level.levelgen.structure.placement.StructurePlacement;
+import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.List;
 import java.util.Set;
@@ -146,7 +148,9 @@ public final class EnderEchoingEyeLocator {
             var start = structureManager.getStructureAt(player.blockPosition(), holder.value());
             if (!start.isValid()) continue;
 
-            player.getData(VISITED_STRUCTURES.get()).add(new VisitedStructure(structureKey.get(), start.getChunkPos()));
+            var chunkPos = start.getChunkPos();
+            if (player.getData(VISITED_STRUCTURES.get()).add(new VisitedStructure(structureKey.get(), chunkPos)))
+                NeoForge.EVENT_BUS.post(new EnderEchoStructureEvent.Visited(player, structureKey.get(), chunkPos));
         }
     }
 }

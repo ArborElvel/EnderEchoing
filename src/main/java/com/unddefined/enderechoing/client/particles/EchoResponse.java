@@ -61,7 +61,7 @@ public class EchoResponse {
 
     public boolean render(Player player, PoseStack poseStack, MultiBufferSource bufferSource, int ticks, boolean isCountingDown, String posName) {
         if (player.isShiftKeyDown() && EchoSoundingPos != null && !Shifted) {
-            // 使用 Shift 键触发Y随机偏移，以避免多个传送点渲染重叠
+            // 使用 Shift 键触发Y随机偏移，以避免多个锚点渲染重叠
             int shiftInt = Math.max(blockPos.distManhattan(EchoSoundingPos), 6);
             blockPos = new BlockPos(blockPos.above(player.getRandom().nextInt(shiftInt) - shiftInt / 2));
             Shifted = true;

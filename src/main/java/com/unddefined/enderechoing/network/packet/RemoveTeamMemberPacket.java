@@ -1,7 +1,7 @@
 package com.unddefined.enderechoing.network.packet;
 
 import com.unddefined.enderechoing.EnderEchoing;
-import com.unddefined.enderechoing.server.team.TeamManager;
+import com.unddefined.enderechoing.api.team.EnderEchoTeams;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
@@ -24,7 +24,7 @@ public record RemoveTeamMemberPacket(UUID targetId) implements CustomPacketPaylo
     public void handle(IPayloadContext context) {
         context.enqueueWork(() -> {
             if (!(context.player() instanceof ServerPlayer caller)) return;
-            TeamManager.RemoveResult result = TeamManager.removeMember(caller, targetId);
+            EnderEchoTeams.RemoveResult result = EnderEchoTeams.removeMember(caller, targetId);
             switch (result) {
                 case REMOVED -> {
                     caller.sendSystemMessage(Component.translatable(
@@ -39,6 +39,8 @@ public record RemoveTeamMemberPacket(UUID targetId) implements CustomPacketPaylo
                         "message.enderechoing.team.captain_target_not_in_team", resolveName(caller, targetId)));
                 case NO_PERMISSION -> caller.sendSystemMessage(Component.translatable(
                         "message.enderechoing.team.remove_no_permission"));
+                case CANCELLED -> caller.sendSystemMessage(Component.translatable(
+                        "message.enderechoing.team.remove_cancelled"));
             }
         });
     }

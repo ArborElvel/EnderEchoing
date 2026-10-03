@@ -3,11 +3,13 @@ package com.unddefined.enderechoing.server.events;
 import com.unddefined.enderechoing.EnderEchoing;
 import com.unddefined.enderechoing.blocks.EnderEchoCrystalBlock;
 import com.unddefined.enderechoing.compat.sculkborne.CompatSculkRegistry;
-import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
-import com.unddefined.enderechoing.server.DataComponents.EnderEchoCrystalSavedData;
-import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
+import com.unddefined.enderechoing.api.crystal.EnderEchoCrystals;
+import com.unddefined.enderechoing.api.pearl.EnderEchoPearls;
 import com.unddefined.enderechoing.server.EnderEchoingEyeLocator;
 import com.unddefined.enderechoing.server.registry.ItemRegistry;
+import com.unddefined.enderechoing.api.teleport.EnderEchoTeleports;
+import com.unddefined.enderechoing.api.anchor.EnderEchoAnchors;
+import com.unddefined.enderechoing.api.waypoint.EnderEchoWaypoints;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -32,11 +34,10 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import top.theillusivec4.curios.api.CuriosApi;
 
 import java.util.Comparator;
-
 import static com.unddefined.enderechoing.Config.SCULK_VEIL_GLOWING_DURATION;
+import static com.unddefined.enderechoing.api.event.EnderEchoPearlEvent.Cause.*;
 import static com.unddefined.enderechoing.compat.sculkborne.CompatSculkRegistry.*;
 import static com.unddefined.enderechoing.server.registry.DataRegistry.EE_PEARL_AMOUNT;
-import static com.unddefined.enderechoing.server.registry.DataRegistry.MARKED_POSITIONS_CACHE;
 import static net.minecraft.world.effect.MobEffects.DARKNESS;
 import static net.minecraft.world.effect.MobEffects.GLOWING;
 
@@ -52,17 +53,15 @@ public class ServerEvents {
     @SubscribeEvent
     public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        var manager = MarkedPositionsManager.getManager(player);
-        manager.teleporters().removeIf(target -> {
-            var level = player.server.getLevel(target.dimension());
-            if (level == null) return true;
-            if (!manager.isTeleporter(level, target.pos())) {
+        for (var anchor : EnderEchoAnchors.of(player)) {
+            var level = player.server.getLevel(anchor.dimension());
+            if (level != null && EnderEchoAnchors.isAnchor(level, anchor.pos())) continue;
+            if (level != null) {
                 player.sendSystemMessage(Component.translatable("message.enderechoing.invalid_marker_removed",
-                        target.pos().toShortString(), target.dimension().location().toString()));
-                return true;
+                        anchor.pos().toShortString(), anchor.dimension().location().toString()));
             }
-            return false;
-        });
+            EnderEchoAnchors.remove(player, anchor.dimension(), anchor.pos());
+        }
     }
 
     @SubscribeEvent
@@ -135,7 +134,7 @@ public class ServerEvents {
         var pos = player.blockPosition();
         var level = player.level();
         if (!(level.getBlockState(pos).getBlock() instanceof EnderEchoCrystalBlock)) return;
-        EnderEchoCrystalSavedData.get((ServerLevel) level).getAll().stream()
+        EnderEchoCrystals.all((ServerLevel) level).stream()
                 .filter(crystal -> crystal.pos().dimension().equals(level.dimension())
                         && crystal.pos().pos().getX() == pos.getX()
                         && crystal.pos().pos().getZ() == pos.getZ()
@@ -144,21 +143,21 @@ public class ServerEvents {
                 .ifPresent(crystal -> {
                     // 传送前记下出发地，传送成功后起点与终点都可能刷出幽匿螨
                     var fromPos = player.position();
+                    if (!EnderEchoTeleports.canTeleport(player, level, fromPos, crystal.pos())) return;
                     player.teleportTo(crystal.pos().pos().getX() + 0.5,
                             crystal.pos().pos().getY() + 0.5, crystal.pos().pos().getZ() + 0.5);
-                    SculkBorneBridge.afterTeleport(player, level, fromPos);
+                    EnderEchoTeleports.afterTeleport(player, level, fromPos, crystal.pos());
                 });
     }
 
     @SubscribeEvent
     public static void onPlayerDeath(LivingDeathEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        var manager = player.getData(MARKED_POSITIONS_CACHE);
-        var deaths = manager.markedPositions().stream().filter(position -> position.name().startsWith("☠")).toList();
+        var deaths = EnderEchoWaypoints.of(player).stream().filter(position -> position.name().startsWith("☠")).toList();
         if (player.getData(EE_PEARL_AMOUNT) < 0 && deaths.size() <= 3) return;
-        manager.markedPositions().removeIf(position -> position.name().startsWith("☠"));
-        manager.addMarkedPosition(player.level().dimension(), player.blockPosition(),
-                "☠" + Component.translatable("screen.enderechoing.last_death").getString() + "☠", 0, false);
+        for (var death : deaths) EnderEchoWaypoints.remove(player, death.dimension(), death.pos());
+        String lastDeathName = "☠" + Component.translatable("screen.enderechoing.last_death").getString() + "☠";
+        boolean marked = EnderEchoWaypoints.add(player, player.level().dimension(), player.blockPosition(), lastDeathName, 0, false);
         for (int i = 0; i < Math.min(3, deaths.size()); i++) {
             var old = deaths.get(i);
             String name = switch (i) {
@@ -166,8 +165,9 @@ public class ServerEvents {
                 case 1 -> "☠" + Component.translatable("screen.enderechoing.earlier_death").getString() + "☠";
                 default -> "☠" + Component.translatable("screen.enderechoing.even_earlier_death").getString() + "☠";
             };
-            manager.addMarkedPosition(old.dimension(), old.pos(), name, 0, false);
+            if (EnderEchoWaypoints.add(player, old.dimension(), old.pos(), name, 0, false)) marked = true;
         }
-        if (deaths.size() < 4) player.setData(EE_PEARL_AMOUNT, player.getData(EE_PEARL_AMOUNT) - 1);
+        // 死亡标记被路径点 Pre 全部拦下时不收费
+        if (deaths.size() < 4 && marked) EnderEchoPearls.add(player, -1, DEATH);
     }
 }

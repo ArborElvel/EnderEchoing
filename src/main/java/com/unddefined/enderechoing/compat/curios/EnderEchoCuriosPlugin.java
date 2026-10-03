@@ -2,7 +2,8 @@ package com.unddefined.enderechoing.compat.curios;
 
 import com.unddefined.enderechoing.EnderEchoing;
 import com.unddefined.enderechoing.network.packet.RenderEchoNamesPacket;
-import com.unddefined.enderechoing.server.DataComponents.EnderEchoCrystalSavedData;
+import com.unddefined.enderechoing.api.crystal.EnderEchoCrystals;
+import com.unddefined.enderechoing.api.waypoint.EnderEchoWaypoints;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -25,7 +26,6 @@ import java.util.Optional;
 
 import static com.unddefined.enderechoing.Config.*;
 import static com.unddefined.enderechoing.server.registry.DataRegistry.ENDER_EYE_OWNER;
-import static com.unddefined.enderechoing.server.registry.DataRegistry.MARKED_POSITIONS_CACHE;
 import static com.unddefined.enderechoing.server.registry.ItemRegistry.ENDER_ECHOING_EYE;
 
 @EventBusSubscriber(modid = EnderEchoing.MODID)
@@ -88,11 +88,11 @@ public class EnderEchoCuriosPlugin {
 
     public static void showResonatorName(ServerPlayer player) {
         Map<BlockPos, String> posName = new HashMap<>();
-        var markedPositions = player.getData(MARKED_POSITIONS_CACHE).markedPositions();
-        var crystals = EnderEchoCrystalSavedData.get((ServerLevel) player.level()).getAll().stream()
+        var waypoints = EnderEchoWaypoints.of(player);
+        var crystals = EnderEchoCrystals.all((ServerLevel) player.level()).stream()
                         .filter(c -> c.pos().dimension().equals(player.level().dimension())).toList();
 
-        markedPositions.stream().filter(e -> e.dimension().equals(player.level().dimension()))
+        waypoints.stream().filter(e -> e.dimension().equals(player.level().dimension()))
                 .filter(e -> e.pos().distToCenterSqr(player.position()) < 25)
                 .forEach(e -> posName.put(e.pos(), e.name()));
 

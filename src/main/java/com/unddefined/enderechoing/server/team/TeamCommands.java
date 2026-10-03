@@ -3,6 +3,8 @@ package com.unddefined.enderechoing.server.team;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.unddefined.enderechoing.EnderEchoing;
+import com.unddefined.enderechoing.api.team.EnderEchoTeams;
+import com.unddefined.enderechoing.api.team.EnderEchoTeam;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
@@ -30,11 +32,11 @@ public class TeamCommands {
 
     private static int castCaptainVote(CommandSourceStack source, ServerPlayer target) throws CommandSyntaxException {
         ServerPlayer caller = source.getPlayerOrException();
-        TeamManager.CaptainVoteResult result = TeamManager.castCaptainVote(caller, target.getUUID());
+        EnderEchoTeams.CaptainVoteResult result = EnderEchoTeams.castCaptainVote(caller, target.getUUID());
         String targetName = target.getGameProfile().getName();
         switch (result) {
             case CAPTAIN_ELECTED -> {
-                PlayerTeam team = TeamManager.teamOf(caller.server, caller.getUUID());
+                EnderEchoTeam team = EnderEchoTeams.teamOf(caller.server, caller.getUUID());
                 if (team != null) {
                     for (UUID memberId : team.members()) {
                         ServerPlayer member = caller.server.getPlayerList().getPlayer(memberId);
@@ -44,7 +46,7 @@ public class TeamCommands {
                 }
             }
             case VOTE_RECORDED -> {
-                PlayerTeam team = TeamManager.teamOf(caller.server, caller.getUUID());
+                EnderEchoTeam team = EnderEchoTeams.teamOf(caller.server, caller.getUUID());
                 caller.sendSystemMessage(Component.translatable("message.enderechoing.team.captain_vote_recorded",
                         targetName,
                         team != null ? team.captainVotes().size() : 0,

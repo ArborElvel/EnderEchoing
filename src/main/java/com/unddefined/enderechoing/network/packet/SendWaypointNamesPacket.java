@@ -16,17 +16,17 @@ import org.jetbrains.annotations.NotNull;
 import java.util.HashMap;
 import java.util.Map;
 
-public record SendMarkedPositionNamesPacket(Map<BlockPos, String> markedPositionNames) implements CustomPacketPayload {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(EnderEchoing.MODID, "send_marked_position_names");
-    public static final Type<SendMarkedPositionNamesPacket> TYPE = new Type<>(ID);
+public record SendWaypointNamesPacket(Map<BlockPos, String> waypointNames) implements CustomPacketPayload {
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(EnderEchoing.MODID, "send_waypoint_names");
+    public static final Type<SendWaypointNamesPacket> TYPE = new Type<>(ID);
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, SendMarkedPositionNamesPacket> STREAM_CODEC = StreamCodec.composite(
+    public static final StreamCodec<RegistryFriendlyByteBuf, SendWaypointNamesPacket> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.map(HashMap::new, BlockPos.STREAM_CODEC, ByteBufCodecs.STRING_UTF8, 256),
-            SendMarkedPositionNamesPacket::markedPositionNames, SendMarkedPositionNamesPacket::new);
+            SendWaypointNamesPacket::waypointNames, SendWaypointNamesPacket::new);
 
     @OnlyIn(Dist.CLIENT)
-    public static void handle(SendMarkedPositionNamesPacket msg, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> EchoRenderer.MarkedPositionNames = msg.markedPositionNames());
+    public static void handle(SendWaypointNamesPacket msg, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> EchoRenderer.WaypointNames = msg.waypointNames());
     }
 
     @Override

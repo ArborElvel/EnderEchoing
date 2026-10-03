@@ -2,8 +2,10 @@ package com.unddefined.enderechoing.items;
 
 import com.unddefined.enderechoing.network.packet.OpenEditScreenPacket;
 import com.unddefined.enderechoing.server.DataComponents.EntityData;
-import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
+import com.unddefined.enderechoing.api.pearl.EnderEchoPearls;
 import com.unddefined.enderechoing.server.registry.ItemRegistry;
+import com.unddefined.enderechoing.api.anchor.EnderEchoAnchors;
+import com.unddefined.enderechoing.api.waypoint.EnderEchoWaypoints;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.component.DataComponents;
@@ -24,6 +26,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import java.util.List;
 
 import static com.unddefined.enderechoing.server.registry.DataRegistry.*;
+import static com.unddefined.enderechoing.api.event.EnderEchoPearlEvent.Cause.*;
 import static net.minecraft.core.component.DataComponents.CUSTOM_NAME;
 
 public class EnderEchoingPearl extends Item {
@@ -36,28 +39,31 @@ public class EnderEchoingPearl extends Item {
         var playerPos = player.blockPosition();
         var pearl = new ItemStack(ItemRegistry.ENDER_ECHOING_PEARL.get());
         var targetPosition = player.getData(EE_PEARL_POSITION.get());
-        var manager = MarkedPositionsManager.getManager(player);
-        boolean bound = manager.isTeleporter(level, targetPosition);
+        boolean bound = EnderEchoAnchors.isAnchor(level, targetPosition);
         pearl.set(CUSTOM_NAME, null);
-        player.setExperiencePoints(player.totalExperience - 80);
 
         if (handStack.getItem() instanceof EnderEchoingPearl) {
             //pearl.use()标记
+            player.setExperiencePoints(player.totalExperience - 80);
             handStack.remove(ENTITY.get());
             handStack.set(DataComponents.CUSTOM_NAME, Component.literal(Name));
             handStack.set(POSITION.get(), new GlobalPos(level.dimension(), playerPos));
-            handStack.set(TBOUND.get(), bound);
+            handStack.set(ANCHOR_BOUND.get(), bound);
         } else {
             //非pearl.use()标记
             if (player.getData(EE_PEARL_AMOUNT.get()) > 0) {
-                manager.addMarkedPosition(level.dimension(), targetPosition, name, iconIndex != -1 ? iconIndex : 0, bound);
-                player.setData(EE_PEARL_AMOUNT.get(), player.getData(EE_PEARL_AMOUNT.get()) - 1);
+                int icon = iconIndex != -1 ? iconIndex : 0;
+                // 路径点 Pre 被拦截时不扣经验、不扣珍珠
+                if (!EnderEchoWaypoints.add(player, level.dimension(), targetPosition, name, icon, bound)) return;
+                EnderEchoPearls.add(player, -1, WAYPOINT);
+                player.setExperiencePoints(player.totalExperience - 80);
             } else {
+                player.setExperiencePoints(player.totalExperience - 80);
                 var pearlStack = player.getInventory().getItem(player.getInventory().findSlotMatchingItem(pearl));
                 var CopyStack = pearlStack.copyWithCount(1);
                 CopyStack.set(DataComponents.CUSTOM_NAME, Component.literal(Name));
                 CopyStack.set(POSITION.get(), new GlobalPos(level.dimension(), targetPosition));
-                CopyStack.set(TBOUND.get(), bound);
+                CopyStack.set(ANCHOR_BOUND.get(), bound);
                 player.getInventory().add(CopyStack);
                 pearlStack.shrink(1);
             }
@@ -65,28 +71,28 @@ public class EnderEchoingPearl extends Item {
     }
 
     /**
-     * 是否持有指向该点的分享凭证：一颗在该点造出的 TBOUND 珍珠。
+     * 是否持有指向该点的分享凭证：一颗在该点造出的 ANCHOR_BOUND 珍珠。
      */
-    public static boolean hasTeleporterToken(Player player, ResourceKey<Level> dimension, BlockPos pos) {
+    public static boolean hasAnchorToken(Player player, ResourceKey<Level> dimension, BlockPos pos) {
         return player.getInventory().hasAnyMatching(stack -> {
             if (!stack.is(ItemRegistry.ENDER_ECHOING_PEARL.get())) return false;
-            if (!Boolean.TRUE.equals(stack.get(TBOUND.get()))) return false;
+            if (!Boolean.TRUE.equals(stack.get(ANCHOR_BOUND.get()))) return false;
             var P = stack.get(POSITION.get());
             return P != null && P.dimension().equals(dimension) && P.pos().equals(pos);
         });
     }
 
     /**
-     * 站在未登记的传送点上时，若手里持有指向该点的 TBOUND 珍珠，就替玩家补上登记。
-     * 登记原本只落在放置者名下，分享出去的珍珠让接收方也能拿到同一个传送点。
+     * 站在未登记的锚点上时，若手里持有指向该点的 ANCHOR_BOUND 珍珠，就替玩家补上登记。
+     * 登记原本只落在放置者名下，分享出去的珍珠让接收方也能拿到同一个锚点。
      *
      * @return true 表示已完成补登记，调用方不应再拒绝这次操作
      */
-    public static boolean tryRebindTeleporter(Player player, Level level, BlockPos pos) {
-        var manager = MarkedPositionsManager.getManager(player);
-        if (!manager.isTeleporter(level, pos)) return false;
-        if (!hasTeleporterToken(player, level.dimension(), pos)) return false;
-        manager.addTeleporter(level, pos);
+    public static boolean tryRebindAnchor(Player player, Level level, BlockPos pos) {
+        if (!EnderEchoAnchors.isAnchor(level, pos)) return false;
+        if (!hasAnchorToken(player, level.dimension(), pos)) return false;
+        if (!EnderEchoAnchors.canRegister(player, level, pos)) return false;
+        EnderEchoAnchors.add(player, level, pos);
         return true;
     }
 
@@ -95,7 +101,6 @@ public class EnderEchoingPearl extends Item {
         var itemStack = player.getItemInHand(hand);
         var positionData = itemStack.get(POSITION.get());
         var entityData = itemStack.get(ENTITY.get());
-        var manager = MarkedPositionsManager.getManager(player);
         if (level.isClientSide) return InteractionResultHolder.fail(itemStack);
 
         if (player.isShiftKeyDown() && (positionData != null || entityData != null)) {
@@ -107,12 +112,12 @@ public class EnderEchoingPearl extends Item {
 
         if (positionData == null && entityData == null){
             var pos = player.blockPosition();
-            // 未登记的传送点：手里持有指向该点的 TBOUND 珍珠时允许补登记，否则拒绝
-            if (manager.checkTeleporter(level, pos) && !tryRebindTeleporter(player, level, pos)){
+            // 未登记的锚点：手里持有指向该点的 ANCHOR_BOUND 珍珠时允许补登记，否则拒绝
+            if (EnderEchoAnchors.isUnregisteredAnchor(player, level, pos) && !tryRebindAnchor(player, level, pos)){
                 player.displayClientMessage(Component.translatable("item.enderechoing.ender_echoing_core.reject"), true);
                 return InteractionResultHolder.fail(itemStack);}
             PacketDistributor.sendToPlayer((ServerPlayer) player, new OpenEditScreenPacket(
-                manager.isTeleporter(level, pos) ? "><" : "", BlockPos.ZERO));}
+                EnderEchoAnchors.isAnchor(level, pos) ? "><" : "", BlockPos.ZERO));}
 
         return InteractionResultHolder.sidedSuccess(itemStack, level.isClientSide());
     }
@@ -128,7 +133,7 @@ public class EnderEchoingPearl extends Item {
             heldStack.set(ENTITY.get(), new EntityData(boundPlayer.getUUID()));
             heldStack.set(DataComponents.CUSTOM_NAME, Component.literal(boundPlayer.getGameProfile().getName()));
             heldStack.remove(POSITION.get());
-            heldStack.remove(TBOUND.get());
+            heldStack.remove(ANCHOR_BOUND.get());
         }
 
         return InteractionResult.sidedSuccess(player.level().isClientSide);

@@ -16,17 +16,17 @@ import org.jetbrains.annotations.NotNull;
 import java.util.HashMap;
 import java.util.Map;
 
-public record RenderEchoNamesPacket(Map<BlockPos, String> markedPositionNames) implements CustomPacketPayload {
+public record RenderEchoNamesPacket(Map<BlockPos, String> waypointNames) implements CustomPacketPayload {
     public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(EnderEchoing.MODID, "render_echo_names");
     public static final Type<RenderEchoNamesPacket> TYPE = new Type<>(ID);
 
     public static final StreamCodec<RegistryFriendlyByteBuf, RenderEchoNamesPacket> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.map(HashMap::new, BlockPos.STREAM_CODEC, ByteBufCodecs.STRING_UTF8, 256),
-            RenderEchoNamesPacket::markedPositionNames, RenderEchoNamesPacket::new);
+            RenderEchoNamesPacket::waypointNames, RenderEchoNamesPacket::new);
 
     @OnlyIn(Dist.CLIENT)
     public static void handle(RenderEchoNamesPacket msg, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> ResonatorNameRenderer.posName = msg.markedPositionNames());
+        ctx.enqueueWork(() -> ResonatorNameRenderer.posName = msg.waypointNames());
     }
 
     @Override

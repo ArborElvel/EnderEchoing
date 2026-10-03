@@ -1,6 +1,7 @@
 package com.unddefined.enderechoing.blocks.entity;
 
 import com.mojang.logging.LogUtils;
+import com.unddefined.enderechoing.api.event.EnderEchoDeviceEvent;
 import com.unddefined.enderechoing.blocks.EnderEchoTunerBlock;
 import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
 import com.unddefined.enderechoing.server.registry.BlockEntityRegistry;
@@ -20,6 +21,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RespawnAnchorBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.NotNull;
 import software.bernie.geckolib.animatable.GeoBlockEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -136,6 +138,9 @@ public class EnderEchoTunerBlockEntity extends BlockEntity implements GeoBlockEn
         this.selectedPos = P;
         if (level != null) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         setChanged();
+        if (level != null && !level.isClientSide)
+            NeoForge.EVENT_BUS.post(new EnderEchoDeviceEvent.PositionChanged(
+                    GlobalPos.of(level.dimension(), worldPosition), P, this.selectedName));
     }
 
     @Override

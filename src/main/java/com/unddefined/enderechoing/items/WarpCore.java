@@ -7,8 +7,9 @@ import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
 import com.unddefined.enderechoing.network.packet.OpenEditScreenPacket;
 import com.unddefined.enderechoing.network.packet.RenderEchoNamesPacket;
 import com.unddefined.enderechoing.network.packet.SetEchoSoundingPosPacket;
-import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
 import com.unddefined.enderechoing.server.registry.ItemRegistry;
+import com.unddefined.enderechoing.api.anchor.EnderEchoAnchors;
+import com.unddefined.enderechoing.api.waypoint.EnderEchoWaypoints;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -111,9 +112,8 @@ public class WarpCore extends Item implements GeoItem {
         PacketDistributor.sendToPlayer(S, new SetEchoSoundingPosPacket(S.blockPosition()));
         if (state.tick < 24) return;
         int D = EECORE_TP_DISTANCE.get();
-        var manager = MarkedPositionsManager.getManager(S);
-        if (manager.teleporters().isEmpty() && manager.markedPositions().isEmpty()) return;
-        manager.markedPositions().stream().filter(e -> e.dimension().equals(level.dimension()))
+        if (EnderEchoAnchors.of(S).isEmpty() && EnderEchoWaypoints.of(S).isEmpty()) return;
+        EnderEchoWaypoints.of(S).stream().filter(e -> e.dimension().equals(level.dimension()))
                 .filter(e -> Math.sqrt(e.pos().distSqr(S.blockPosition())) < D * 4)
                 .forEach(e -> Map.put(e.pos(), e.name()));
         PacketDistributor.sendToPlayer(S, new RenderEchoNamesPacket(Map));
@@ -131,7 +131,6 @@ public class WarpCore extends Item implements GeoItem {
     @Override
     public @NotNull InteractionResultHolder<ItemStack> use(@NotNull Level level, @NotNull Player player, @NotNull InteractionHand hand) {
         var stack = player.getItemInHand(hand);
-        var manager = MarkedPositionsManager.getManager(player);
         if (level.isClientSide()) return InteractionResultHolder.fail(stack);
 
         if (!player.isShiftKeyDown()) {
@@ -156,8 +155,9 @@ public class WarpCore extends Item implements GeoItem {
                 i.getItem() == ItemRegistry.ENDER_ECHOING_PEARL.get() && i.get(CUSTOM_NAME) == null)) {
             String name = (player.getData(EE_PEARL_AMOUNT.get()) > 0 ? "÷" : "");
             var pos = player.blockPosition();
-            // 未登记的传送点：手里持有指向该点的 TBOUND 珍珠时允许补登记，否则拒绝
-            boolean hasnt = manager.checkTeleporter(level, pos) && !EnderEchoingPearl.tryRebindTeleporter(player, level, pos);
+            // 未登记的锚点：手里持有指向该点的 ANCHOR_BOUND 珍珠时允许补登记，否则拒绝
+            boolean hasnt = EnderEchoAnchors.isUnregisteredAnchor(player, level, pos)
+                    && !EnderEchoingPearl.tryRebindAnchor(player, level, pos);
             if (hasnt) {
                 player.displayClientMessage(Component.translatable("item.enderechoing.ender_echoing_core.reject"), true);
                 return InteractionResultHolder.consume(stack);

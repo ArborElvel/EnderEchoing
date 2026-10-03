@@ -1,8 +1,11 @@
 package com.unddefined.enderechoing.items;
 
 import com.unddefined.enderechoing.client.renderer.item.EnderEchoTuneChamberRenderer;
-import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
+import com.unddefined.enderechoing.api.pearl.EnderEchoPearls;
+import com.unddefined.enderechoing.api.anchor.EnderEchoAnchors;
+import com.unddefined.enderechoing.api.waypoint.EnderEchoWaypoints;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.SlotAccess;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ClickAction;
@@ -21,6 +24,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 import java.util.function.Consumer;
 
 import static com.unddefined.enderechoing.server.registry.DataRegistry.*;
+import static com.unddefined.enderechoing.api.event.EnderEchoPearlEvent.Cause.*;
 import static com.unddefined.enderechoing.server.registry.ItemRegistry.ENDER_ECHOING_PEARL;
 import static net.minecraft.core.component.DataComponents.CUSTOM_NAME;
 
@@ -54,17 +58,20 @@ public class EnderEchoTuneChamber extends Item implements GeoItem {
 
     private void addPearls(Player player, ItemStack other) {
         var stackPos = other.get(POSITION);
-        boolean bound = Boolean.TRUE.equals(other.get(TBOUND));
-        var manager = MarkedPositionsManager.getManager(player);
-        boolean result = stackPos != null && manager.addMarkedPosition(stackPos.dimension(), stackPos.pos(),
-                other.get(CUSTOM_NAME).getString(), 0, bound);
+        boolean bound = Boolean.TRUE.equals(other.get(ANCHOR_BOUND));
+        boolean result = false;
+        if (stackPos != null) {
+            var pearlName = other.get(CUSTOM_NAME).getString();
+            result = EnderEchoWaypoints.add(player, stackPos.dimension(), stackPos.pos(), pearlName, 0, bound);
+        }
         // 分享过来的凭证珍珠：接收方插进调谐腔时一并补登记，否则这个点只有分享者能用
         if (result && bound) {
             var level = player.getServer() == null ? null : player.getServer().getLevel(stackPos.dimension());
-            if (level != null && manager.isTeleporter(level, stackPos.pos()))
-                manager.addTeleporter(level, stackPos.pos());
+            if (level != null && EnderEchoAnchors.isAnchor(level, stackPos.pos())
+                    && EnderEchoAnchors.canRegister(player, level, stackPos.pos()))
+                EnderEchoAnchors.add(player, level, stackPos.pos());
         }
-        player.setData(EE_PEARL_AMOUNT, player.getData(EE_PEARL_AMOUNT) + other.getCount() - (result ? 1 : 0));
+        EnderEchoPearls.add(player, other.getCount() - (result ? 1 : 0), CONVERT);
         other.shrink(other.getCount());
     }
 

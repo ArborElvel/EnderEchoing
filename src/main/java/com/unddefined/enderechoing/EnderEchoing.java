@@ -1,6 +1,7 @@
 package com.unddefined.enderechoing;
 
 import com.mojang.logging.LogUtils;
+import com.unddefined.enderechoing.api.anchor.EnderEchoAnchorRegistry;
 import com.unddefined.enderechoing.client.gui.TunerMenu;
 import com.unddefined.enderechoing.compat.sculkborne.CompatSculkRegistry;
 import com.unddefined.enderechoing.server.registry.*;
@@ -12,6 +13,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.slf4j.Logger;
@@ -49,5 +51,8 @@ public class EnderEchoing {
             CompatSculkRegistry.POTIONS.register(modEventBus);
             CompatSculkRegistry.ATTACHMENTS.register(modEventBus);
         }
+
+        BuiltinAnchors.register();
+        modEventBus.addListener(FMLLoadCompleteEvent.class, event -> EnderEchoAnchorRegistry.freeze());
     }
 }

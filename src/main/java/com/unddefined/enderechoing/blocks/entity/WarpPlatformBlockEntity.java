@@ -1,6 +1,7 @@
 package com.unddefined.enderechoing.blocks.entity;
 
 import com.unddefined.enderechoing.server.registry.BlockEntityRegistry;
+import com.unddefined.enderechoing.api.event.EnderEchoDeviceEvent;
 import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -15,6 +16,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.NotNull;
 import software.bernie.geckolib.animatable.GeoBlockEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -95,6 +97,9 @@ public class WarpPlatformBlockEntity  extends BlockEntity implements GeoBlockEnt
         this.selectedPos = P;
         if (level != null) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         setChanged();
+        if (level != null && !level.isClientSide)
+            NeoForge.EVENT_BUS.post(new EnderEchoDeviceEvent.PositionChanged(
+                    GlobalPos.of(level.dimension(), worldPosition), P, this.selectedName));
     }
 
     public String getselectedName() {

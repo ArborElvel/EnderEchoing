@@ -3,9 +3,9 @@ package com.unddefined.enderechoing.blocks;
 import com.unddefined.enderechoing.blocks.entity.WarpPlatformBlockEntity;
 import com.unddefined.enderechoing.client.gui.TunerMenu;
 import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
-import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
 import com.unddefined.enderechoing.server.registry.BlockEntityRegistry;
-import com.unddefined.enderechoing.server.registry.DataRegistry;
+import com.unddefined.enderechoing.api.teleport.EnderEchoTeleports;
+import com.unddefined.enderechoing.api.anchor.EnderEchoAnchors;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
@@ -85,7 +85,7 @@ public class WarpPlatformBlock extends Block implements EntityBlock {
         if (!(entity instanceof ServerPlayer player)) return;
         if (entity.isCurrentlyGlowing()) return;
         if (!(level.getBlockEntity(pos) instanceof WarpPlatformBlockEntity BE)) return;
-        if (MarkedPositionsManager.getManager(player).teleporters().stream()
+        if (EnderEchoAnchors.of(player).stream()
                 .noneMatch(e -> e.pos().equals(pos) && e.dimension().equals(level.dimension()))) return;
         if (BE.getSelectedPos().equals(GZERO)) return;
         if (player.isShiftKeyDown()) {
@@ -93,9 +93,10 @@ public class WarpPlatformBlock extends Block implements EntityBlock {
             if (destination == null) return;
             // 传送前记下出发地，传送成功后起点与终点都可能刷出幽匿螨
             var fromPos = player.position();
+            if (!EnderEchoTeleports.canTeleport(player, level, fromPos, BE.getSelectedPos())) return;
             player.changeDimension(new DimensionTransition(destination, BE.getSelectedPos().pos().getCenter(),
                     player.getDeltaMovement(), player.getYRot(), player.getXRot(), DimensionTransition.PLAY_PORTAL_SOUND));
-            SculkBorneBridge.afterTeleport(player, level, fromPos);
+            EnderEchoTeleports.afterTeleport(player, level, fromPos, BE.getSelectedPos());
         }
     }
 
@@ -104,9 +105,7 @@ public class WarpPlatformBlock extends Block implements EntityBlock {
         if (level.getServer() == null) return;
         if (state.is(newState.getBlock())) return;
         level.getServer().getPlayerList().getPlayers().forEach(player -> {
-            var M = player.getData(DataRegistry.MARKED_POSITIONS_CACHE.get());
-            M.teleporters().removeIf(e -> e.dimension().equals(level.dimension()) && e.pos().equals(pos));
-            M.checkBounds();
+            EnderEchoAnchors.remove(player, level.dimension(), pos);
         });
         super.onRemove(state, level, pos, newState, movedByPiston);
     }

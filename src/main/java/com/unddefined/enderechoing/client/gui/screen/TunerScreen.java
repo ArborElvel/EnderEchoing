@@ -7,8 +7,8 @@ import com.unddefined.enderechoing.client.gui.widgets.TeamList;
 import com.unddefined.enderechoing.client.gui.widgets.WaypointList;
 import com.unddefined.enderechoing.network.packet.ShareToTeamPacket;
 import com.unddefined.enderechoing.network.packet.SyncTunerDataPacket;
-import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
 import com.unddefined.enderechoing.server.registry.ItemRegistry;
+import com.unddefined.enderechoing.api.waypoint.EnderEchoWaypoint;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.ImageButton;
@@ -32,7 +32,7 @@ import static com.unddefined.enderechoing.compat.jei.EnderEchoJeiPlugin.getItemF
 import static net.minecraft.core.registries.BuiltInRegistries.ITEM;
 
 public class TunerScreen extends AbstractContainerScreen<TunerMenu> {
-    private final List<MarkedPositionsManager.MarkedPositions> MarkedPositionsCache;
+    private final List<EnderEchoWaypoint> WaypointsCache;
     private final WidgetSprites ACCEPT_SPRITE = new WidgetSprites(ResourceLocation.withDefaultNamespace("pending_invite/accept_highlighted"), ResourceLocation.withDefaultNamespace("pending_invite/accept"));
     private final WidgetSprites REJECT_SPRITE = new WidgetSprites(ResourceLocation.withDefaultNamespace("pending_invite/reject_highlighted"), ResourceLocation.withDefaultNamespace("pending_invite/reject"));
     private static final ResourceLocation SORT_MANUAL_SPRITE = ResourceLocation.fromNamespaceAndPath("enderechoing", "textures/gui/sort_manual.png");
@@ -60,7 +60,7 @@ public class TunerScreen extends AbstractContainerScreen<TunerMenu> {
 
     public TunerScreen(TunerMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
-        this.MarkedPositionsCache = menu.getMarkedPositionsCache();
+        this.WaypointsCache = menu.getWaypointsCache();
     }
 
     @Override
@@ -131,7 +131,7 @@ public class TunerScreen extends AbstractContainerScreen<TunerMenu> {
         waypointList.children().clear();
         waypointList.setScrollAmount(0);
         String search = searchField == null ? "" : searchField.getValue().trim().toLowerCase(Locale.ROOT);
-        MarkedPositionsCache.stream()
+        WaypointsCache.stream()
                 .filter(e -> e.iconIndex() == selectedTab)
                 .filter(e -> search.isEmpty() || e.name().toLowerCase(Locale.ROOT).contains(search))
                 .sorted(getWaypointComparator())
@@ -147,8 +147,8 @@ public class TunerScreen extends AbstractContainerScreen<TunerMenu> {
                 .forEach(member -> teamList.addMember(member));
     }
 
-    private Comparator<MarkedPositionsManager.MarkedPositions> getWaypointComparator() {
-        Comparator<MarkedPositionsManager.MarkedPositions> comparator = Comparator.comparing(this::isSelfWaypoint).reversed();
+    private Comparator<EnderEchoWaypoint> getWaypointComparator() {
+        Comparator<EnderEchoWaypoint> comparator = Comparator.comparing(this::isSelfWaypoint).reversed();
         if (sortMode == 1) {
             comparator = comparator.thenComparingDouble(e -> e.pos().distSqr(menu.getTunerPos().pos()));
         } else if (sortMode == 2) {
@@ -165,7 +165,7 @@ public class TunerScreen extends AbstractContainerScreen<TunerMenu> {
         };
     }
 
-    private boolean isSelfWaypoint(MarkedPositionsManager.MarkedPositions M) {
+    private boolean isSelfWaypoint(EnderEchoWaypoint M) {
         return M.pos().above(2).equals(menu.getTunerPos().pos())
                 || (menu.canWarp() && (menu.getTunerPos().pos().distSqr(M.pos()) < 4)
                 && menu.getTunerPos().dimension().equals(M.dimension()));
@@ -174,7 +174,7 @@ public class TunerScreen extends AbstractContainerScreen<TunerMenu> {
     @Override
     public void onClose() {
         if (menu.getIconList().get(selectedTab).isEmpty()) menu.getIconList().set(selectedTab, previousIcon);
-        PacketDistributor.sendToServer(new SyncTunerDataPacket(menu.getIconList(), MarkedPositionsCache, menu.ee_pearl_amount));
+        PacketDistributor.sendToServer(new SyncTunerDataPacket(menu.getIconList(), WaypointsCache, menu.ee_pearl_amount));
         if (!menu.isFacing_down() && !menu.canWarp()) menu.setSelectedPosition(null);
         super.onClose();
     }
@@ -291,7 +291,7 @@ public class TunerScreen extends AbstractContainerScreen<TunerMenu> {
         if (waypointList.getSelected() == null) return true;
         if (button != 0) return true;
 
-        var M = waypointList.getSelected().getMarkedPosition();
+        var M = waypointList.getSelected().getWaypoint();
         waypointList.setSelected(null);
         // 更换图标
         for (int i = 0; i <= 9; i++) {
@@ -308,15 +308,15 @@ public class TunerScreen extends AbstractContainerScreen<TunerMenu> {
 
             selectedTab = i;
 
-            var newPosition = new MarkedPositionsManager.MarkedPositions(M.dimension(), M.pos(), M.name(), i, M.teleporterBound());
-            MarkedPositionsCache.set(MarkedPositionsCache.indexOf(M), newPosition);
+            var newPosition = new EnderEchoWaypoint(M.dimension(), M.pos(), M.name(), i, M.anchorBound());
+            WaypointsCache.set(WaypointsCache.indexOf(M), newPosition);
             populateWaypointList();
             return super.mouseReleased(mouseX, mouseY, button);
         }
         // 交换位置
         var swapEntry = waypointList.getEntryFromMouse(mouseX, mouseY);
         if (swapEntry != null && swapEntry != focusingEntry && sortMode == 0) {
-            waypointList.swapInMainList(M, swapEntry.getMarkedPosition());
+            waypointList.swapInMainList(M, swapEntry.getWaypoint());
             populateWaypointList();
         }
         return super.mouseReleased(mouseX, mouseY, button);
@@ -369,8 +369,8 @@ public class TunerScreen extends AbstractContainerScreen<TunerMenu> {
         return focusingEntry;
     }
 
-    public List<MarkedPositionsManager.MarkedPositions> getMarkedPositionsCache() {
-        return MarkedPositionsCache;
+    public List<EnderEchoWaypoint> getWaypointsCache() {
+        return WaypointsCache;
     }
 
 }

@@ -7,7 +7,7 @@ import com.unddefined.enderechoing.network.packet.PearlRenamePacket;
 import com.unddefined.enderechoing.network.packet.RequestDimensionListPacket;
 import com.unddefined.enderechoing.network.packet.RequestStructureInfoPacket;
 import com.unddefined.enderechoing.network.packet.SetUnchargedPacket;
-import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
+import com.unddefined.enderechoing.api.waypoint.EnderEchoWaypoint;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -86,13 +86,13 @@ public class PositionEditScreen extends Screen {
         this.addRenderableWidget(insertBtn);
         if (lastScreen instanceof TunerScreen tunerScreen) {
             //需处于同一维度
-            var M = tunerScreen.getFocusingEntry().getMarkedPosition();
+            var M = tunerScreen.getFocusingEntry().getWaypoint();
             if (M != null && !M.dimension().location().toShortLanguageKey().equals(dimension)) insertBtn.active = false;
         }
 
         if (lastScreen instanceof TunerScreen tunerScreen && tunerScreen.getMenu().isCharged()) {
             isCharged = true;
-            var M = tunerScreen.getFocusingEntry().getMarkedPosition();
+            var M = tunerScreen.getFocusingEntry().getWaypoint();
             posX = new EditBox(this.font, this.width / 2 - 90, this.height / 2 + 16, 52, 20, Component.literal(String.valueOf(M.pos().getX())));
             posX.setValue(M.pos().getX() + "");
             posY = new EditBox(this.font, this.width / 2 - 21, this.height / 2 + 16, 52, 20, Component.literal(String.valueOf(M.pos().getY())));
@@ -184,12 +184,12 @@ public class PositionEditScreen extends Screen {
         if (name.isEmpty()) name = fieldValue;
 
         if (lastScreen instanceof TunerScreen tunerScreen) {
-            var M = tunerScreen.getFocusingEntry().getMarkedPosition();
+            var M = tunerScreen.getFocusingEntry().getWaypoint();
             var newPos = isCharged ? new BlockPos(Integer.parseInt(posX.getValue()), Integer.parseInt(posY.getValue()), Integer.parseInt(posZ.getValue())) : M.pos();
             var newDimension = isCharged ? DimensionSelecter.dimension : M.dimension();
-            var newM = new MarkedPositionsManager.MarkedPositions(newDimension, newPos, name,
-                    tabBar != null ? tabBar.selectedTab : M.iconIndex(), M.teleporterBound());
-            tunerScreen.getMarkedPositionsCache().set(tunerScreen.getMarkedPositionsCache().indexOf(M), newM);
+            var newM = new EnderEchoWaypoint(newDimension, newPos, name,
+                    tabBar != null ? tabBar.selectedTab : M.iconIndex(), M.anchorBound());
+            tunerScreen.getWaypointsCache().set(tunerScreen.getWaypointsCache().indexOf(M), newM);
             tunerScreen.populateWaypointList();
             if (isCharged && !newPos.equals(M.pos()) || !newDimension.equals(M.dimension()))
                 PacketDistributor.sendToServer(new SetUnchargedPacket(tunerScreen.getMenu().getTunerPos().pos()));

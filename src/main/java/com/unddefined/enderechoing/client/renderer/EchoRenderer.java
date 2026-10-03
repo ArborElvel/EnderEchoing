@@ -38,8 +38,8 @@ public class EchoRenderer {
     public static BlockPos EchoSoundingPos = null;
     public static boolean targetPreseted = false;
     public static GlobalPos targetPos = null;
-    public static List<BlockPos> syncedTeleporterPositions = new ArrayList<>();
-    public static Map<BlockPos, String> MarkedPositionNames = new HashMap<>();
+    public static List<BlockPos> syncedAnchorPositions = new ArrayList<>();
+    public static Map<BlockPos, String> WaypointNames = new HashMap<>();
     private static int countTicks = 0;
     private static int countdownTicks = 60;
     private static int teleportTicks = 0;
@@ -106,7 +106,7 @@ public class EchoRenderer {
                 echoMap.forEach((pos, response) -> {
                     boolean hovering = response.render(mc.player, poseStack, bufferSource,
                             countTicks - 40 - responseTime, countdownTicks < 59,
-                            MarkedPositionNames.getOrDefault(pos, null));
+                            WaypointNames.getOrDefault(pos, null));
                     if (hovering && !mc.player.isCurrentlyGlowing())
                         EchoResponding.render(poseStack, bufferSource, pos, teleportTicks);
                 });
@@ -154,8 +154,8 @@ public class EchoRenderer {
             isCounting = true;
             countdownTicks = 60;
             responseTime = SculkBorneBridge.hasVeil(player) ? 120 : 30;
-            if (echoMap.isEmpty() && !syncedTeleporterPositions.isEmpty()) {
-                for (BlockPos pos : syncedTeleporterPositions) {
+            if (echoMap.isEmpty() && !syncedAnchorPositions.isEmpty()) {
+                for (BlockPos pos : syncedAnchorPositions) {
                     if (pos.equals(EchoSoundingPos)) continue;
                     if (!new AABB(EchoSoundingPos).inflate(EchoSoundingDistance.get()).contains(Vec3.atCenterOf(pos))) continue;
                     echoMap.putIfAbsent(pos, new EchoResponse(pos));
@@ -192,7 +192,7 @@ public class EchoRenderer {
 
     private static void reset() {
         EchoSoundingPos = null;
-        syncedTeleporterPositions.clear();
+        syncedAnchorPositions.clear();
         targetPreseted = false;
         targetPos = null;
         teleportTicks = 0;

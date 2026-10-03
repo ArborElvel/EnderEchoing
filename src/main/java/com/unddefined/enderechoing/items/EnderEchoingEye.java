@@ -2,7 +2,7 @@ package com.unddefined.enderechoing.items;
 
 import com.unddefined.enderechoing.blocks.entity.EnderEchoCrystalBlockEntity;
 import com.unddefined.enderechoing.entities.EnderEchoingEyeEntity;
-import com.unddefined.enderechoing.server.DataComponents.EnderEchoCrystalSavedData;
+import com.unddefined.enderechoing.api.crystal.EnderEchoCrystals;
 import com.unddefined.enderechoing.server.EnderEchoingEyeLocator;
 import com.unddefined.enderechoing.server.registry.DataRegistry;
 import net.minecraft.core.BlockPos;
@@ -104,7 +104,7 @@ public class EnderEchoingEye extends Item implements ICurioItem {
 
         var level = (ServerLevel) player.level();
         var D = EECrystal_HEAL_DISTANCE.get();
-        EnderEchoCrystalSavedData.get(level).crystals.stream().filter(c -> c.pos().dimension().equals(level.dimension()))
+        EnderEchoCrystals.all(level).stream().filter(c -> c.pos().dimension().equals(level.dimension()))
                 .min(Comparator.comparingDouble(c -> c.pos().pos().distToCenterSqr(player.getX(), player.getY(), player.getZ())))
                 .filter(c -> Math.sqrt(c.pos().pos().distToCenterSqr(player.getX(), player.getY(), player.getZ())) < D)
                 .ifPresentOrElse(c -> state.eECrystal = (EnderEchoCrystalBlockEntity) level.getBlockEntity(c.pos().pos()),

@@ -1,5 +1,6 @@
 package com.unddefined.enderechoing.server.DataComponents;
 
+import com.unddefined.enderechoing.api.event.EnderEchoCrystalEvent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.HolderLookup;
@@ -10,8 +11,11 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.*;
 
@@ -40,14 +44,49 @@ public class EnderEchoCrystalSavedData extends SavedData {
     }
 
     // ===== API =====
-    public void add(ResourceKey<Level> d, BlockPos p) {
-        crystals.add(new CrystalEntry(GlobalPos.of(d, p), ""));
-        setDirty();
+    /**
+     * 派发可取消的 {@link EnderEchoCrystalEvent.Pre}。
+     *
+     * <p>只负责判定，不修改任何数据；返回 true 的调用方应当继续放置方块与实体，然后调用
+     * {@link #add}。非服务端玩家一律放行。
+     */
+    public static boolean canAdd(Player player, ResourceKey<Level> dimension, BlockPos pos) {
+        if (!(player instanceof ServerPlayer serverPlayer)) return true;
+        var event = new EnderEchoCrystalEvent.Pre(serverPlayer, GlobalPos.of(dimension, pos));
+        NeoForge.EVENT_BUS.post(event);
+        return !event.isCanceled();
     }
 
-    public void remove(GlobalPos pos) {
-        crystals.removeIf(g -> g.pos.equals(pos));
+    public boolean add(ResourceKey<Level> d, BlockPos p) {
+        var globalPos = GlobalPos.of(d, p);
+        boolean added = crystals.add(new CrystalEntry(globalPos, ""));
         setDirty();
+        if (added) NeoForge.EVENT_BUS.post(new EnderEchoCrystalEvent.Added(globalPos));
+        return added;
+    }
+
+    public boolean remove(GlobalPos pos) {
+        boolean removed = crystals.removeIf(g -> g.pos.equals(pos));
+        setDirty();
+        if (removed) NeoForge.EVENT_BUS.post(new EnderEchoCrystalEvent.Removed(pos));
+        return removed;
+    }
+
+    /**
+     * 改写已登记水晶的名称。
+     *
+     * @return true 表示找到了该水晶并写入；名称没有变化时也返回 true，但不会派发事件
+     */
+    public boolean rename(GlobalPos pos, String name) {
+        for (CrystalEntry entry : crystals) {
+            if (!entry.pos.equals(pos)) continue;
+            boolean changed = !entry.name.equals(name);
+            entry.setName(name);
+            setDirty();
+            if (changed) NeoForge.EVENT_BUS.post(new EnderEchoCrystalEvent.Renamed(pos, name));
+            return true;
+        }
+        return false;
     }
 
     public Set<CrystalEntry> getAll() {

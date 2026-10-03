@@ -4,12 +4,14 @@ import com.unddefined.enderechoing.blocks.entity.EnderEchoCrystalBlockEntity;
 import com.unddefined.enderechoing.blocks.entity.EnderEchoTunerBlockEntity;
 import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
 import com.unddefined.enderechoing.entities.EnderEchoCrystalEntity;
-import com.unddefined.enderechoing.network.packet.SendMarkedPositionNamesPacket;
-import com.unddefined.enderechoing.network.packet.SendSyncedTeleporterPositionsPacket;
+import com.unddefined.enderechoing.network.packet.SendWaypointNamesPacket;
+import com.unddefined.enderechoing.network.packet.SendSyncedAnchorPositionsPacket;
 import com.unddefined.enderechoing.network.packet.SetEchoSoundingPosPacket;
-import com.unddefined.enderechoing.server.DataComponents.EnderEchoCrystalSavedData;
+import com.unddefined.enderechoing.api.crystal.EnderEchoCrystals;
+import com.unddefined.enderechoing.api.pearl.EnderEchoPearls;
 import com.unddefined.enderechoing.server.registry.BlockEntityRegistry;
 import com.unddefined.enderechoing.server.registry.ItemRegistry;
+import com.unddefined.enderechoing.api.teleport.EnderEchoTeleports;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.server.level.ServerLevel;
@@ -50,6 +52,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.unddefined.enderechoing.Config.EECrystal_TP_DISTANCE;
+import static com.unddefined.enderechoing.api.event.EnderEchoPearlEvent.Cause.*;
 import static com.unddefined.enderechoing.EnderEchoing.GZERO;
 import static com.unddefined.enderechoing.server.registry.DataRegistry.EE_PEARL_AMOUNT;
 import static com.unddefined.enderechoing.server.registry.ItemRegistry.ENDER_ECHOING_CORE;
@@ -115,8 +118,10 @@ public class EnderEchoCrystalBlock extends Block implements EntityBlock {
         if (level.isClientSide()) return ItemInteractionResult.FAIL;
 
         if (stack.getItem().equals(ECHO_SHARD) && stack.get(CUSTOM_NAME) != null) {
-            EnderEchoCrystalSavedData.get((ServerLevel) level).getAll().stream().filter(c -> c.pos().dimension().equals(level.dimension())).filter(c-> c.pos().pos().equals(pos)).findFirst().get().setName(stack.get(CUSTOM_NAME).getString());
-            stack.shrink(1);
+            // 原来用 Optional.get()：水晶未登记时会抛异常且不消耗物品；改为只有改名成功才消耗
+            if (EnderEchoCrystals.rename((ServerLevel) level,
+                    GlobalPos.of(level.dimension(), pos), stack.get(CUSTOM_NAME).getString()))
+                stack.shrink(1);
             return ItemInteractionResult.SUCCESS;
         }
 
@@ -137,7 +142,7 @@ public class EnderEchoCrystalBlock extends Block implements EntityBlock {
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
         if (state.is(newState.getBlock())) return;
-        EnderEchoCrystalSavedData.get((ServerLevel) level).remove(GlobalPos.of(level.dimension(),pos));
+        EnderEchoCrystals.remove((ServerLevel) level, GlobalPos.of(level.dimension(), pos));
         level.getEntities(new EnderEchoCrystalEntity(level, pos), new AABB(pos), e -> true)
                 .forEach(e -> e.remove(Entity.RemovalReason.KILLED));
         super.onRemove(state, level, pos, newState, moved);
@@ -158,12 +163,13 @@ public class EnderEchoCrystalBlock extends Block implements EntityBlock {
             var Pos = B.getSelectedPos().pos().getCenter();
             // 传送前记下出发地，传送成功后起点与终点都可能刷出幽匿螨
             var fromPos = player.position();
+            if (!EnderEchoTeleports.canTeleport(player, level, fromPos, B.getSelectedPos())) return;
             player.teleportTo(Pos.x,Pos.y,Pos.z);
-            player.setData(EE_PEARL_AMOUNT, player.getData(EE_PEARL_AMOUNT) - 1);
-            SculkBorneBridge.afterTeleport(player, level, fromPos);
+            EnderEchoPearls.add(player, -1, TELEPORT);
+            EnderEchoTeleports.afterTeleport(player, level, fromPos, B.getSelectedPos());
             return;
         }
-        var crystals = EnderEchoCrystalSavedData.get((ServerLevel) level).getAll().stream().filter(C -> C.pos().dimension().equals(level.dimension())).toList();
+        var crystals = EnderEchoCrystals.all((ServerLevel) level).stream().filter(C -> C.pos().dimension().equals(level.dimension())).toList();
         if (crystals.size() < 2) return;
         if (entity.isCurrentlyGlowing()) return;
         PacketDistributor.sendToPlayer(player, new SetEchoSoundingPosPacket(pos));
@@ -171,16 +177,18 @@ public class EnderEchoCrystalBlock extends Block implements EntityBlock {
         crystals.stream().filter(p -> Math.sqrt(p.pos().pos().distSqr(pos)) <= D).filter(
                 p -> level.getBlockState(p.pos().pos()).getValue(CHANNEL).equals(state.getValue(CHANNEL))
         ).forEach(p -> posList.put(p.pos().pos(),p.name()));
-        PacketDistributor.sendToPlayer(player, new SendSyncedTeleporterPositionsPacket(posList.keySet().stream().toList()));
-        PacketDistributor.sendToPlayer(player, new SendMarkedPositionNamesPacket(posList));
+        PacketDistributor.sendToPlayer(player, new SendSyncedAnchorPositionsPacket(posList.keySet().stream().toList()));
+        PacketDistributor.sendToPlayer(player, new SendWaypointNamesPacket(posList));
         if (player.isShiftKeyDown()) posList.keySet().stream().toList().stream()
                 .filter(p -> (p.getX() == pos.getX()) && (p.getZ() == pos.getZ()) && (p.getY() < pos.getY()))
                 .min(Comparator.comparingInt(BlockPos::getY))
                 .ifPresent(p -> {
                     // 传送前记下出发地，传送成功后起点与终点都可能刷出幽匿螨
                     var fromPos = player.position();
+                    var target = GlobalPos.of(level.dimension(), p);
+                    if (!EnderEchoTeleports.canTeleport(player, level, fromPos, target)) return;
                     player.teleportTo(p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5);
-                    SculkBorneBridge.afterTeleport(player, level, fromPos);
+                    EnderEchoTeleports.afterTeleport(player, level, fromPos, target);
                 });
     }
 

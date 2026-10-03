@@ -3,7 +3,7 @@ package com.unddefined.enderechoing.client.gui.widgets;
 import com.unddefined.enderechoing.client.gui.screen.PositionEditScreen;
 import com.unddefined.enderechoing.client.gui.screen.TunerScreen;
 import com.unddefined.enderechoing.network.packet.TeleportRequestPacket;
-import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
+import com.unddefined.enderechoing.api.waypoint.EnderEchoWaypoint;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ContainerObjectSelectionList;
@@ -21,7 +21,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import java.util.List;
 
 import static com.unddefined.enderechoing.server.registry.DataRegistry.POSITION;
-import static com.unddefined.enderechoing.server.registry.DataRegistry.TBOUND;
+import static com.unddefined.enderechoing.server.registry.DataRegistry.ANCHOR_BOUND;
 import static com.unddefined.enderechoing.server.registry.ItemRegistry.ENDER_ECHOING_PEARL;
 import static net.minecraft.client.gui.screens.Screen.hasShiftDown;
 import static net.minecraft.core.component.DataComponents.CUSTOM_NAME;
@@ -29,24 +29,24 @@ import static net.minecraft.core.component.DataComponents.CUSTOM_NAME;
 public class WaypointList extends ContainerObjectSelectionList<WaypointList.WaypointEntry> {
     private final TunerScreen screen;
     private final ContextMenu contextMenu;
-    public MarkedPositionsManager.MarkedPositions selectedPosition;
+    public EnderEchoWaypoint selectedPosition;
 
     public WaypointList(Minecraft minecraft, int width, int height, int x, int y, int itemHeight, TunerScreen screen) {
         super(minecraft, width, height, y, itemHeight);
         this.setX(x);
         this.screen = screen;
         this.contextMenu = new ContextMenu();
-        selectedPosition = screen.getMarkedPositionsCache().stream().filter(
+        selectedPosition = screen.getWaypointsCache().stream().filter(
                 M -> M.pos().equals(screen.getMenu().getSelectedPos().pos())).findFirst().orElse(null);
     }
 
-    public void addWaypoint(MarkedPositionsManager.MarkedPositions M) {this.addEntry(new WaypointEntry(this, M));}
+    public void addWaypoint(EnderEchoWaypoint M) {this.addEntry(new WaypointEntry(this, M));}
 
     public WaypointEntry getEntryFromMouse(double mouseX, double mouseY) {return this.getEntryAtPosition(mouseX, mouseY);}
 
     public ContextMenu getContextMenu() {return contextMenu;}
 
-    public void openContextMenu(int mouseX, int mouseY, MarkedPositionsManager.MarkedPositions M, WaypointEntry entry) {
+    public void openContextMenu(int mouseX, int mouseY, EnderEchoWaypoint M, WaypointEntry entry) {
         contextMenu.clear();
 
         if (screen.getMenu().canWarp()){
@@ -64,14 +64,14 @@ public class WaypointList extends ContainerObjectSelectionList<WaypointList.Wayp
             screen.getMenu().ee_pearl_amount--;
             var pearl = new ItemStack(ENDER_ECHOING_PEARL.get(), 1);
             pearl.set(POSITION.get(), new GlobalPos(M.dimension(), M.pos()));
-            pearl.set(TBOUND.get(), M.teleporterBound());
+            pearl.set(ANCHOR_BOUND.get(), M.anchorBound());
             pearl.set(CUSTOM_NAME, Component.literal(M.name()));
             screen.getMenu().givePlayerPearl(pearl);
         });
 
         contextMenu.addItem("screen.enderechoing.remove", () -> {
             contextMenu.addItem("screen.enderechoing.confirm_remove", () -> {
-                screen.getMarkedPositionsCache().remove(M);
+                screen.getWaypointsCache().remove(M);
                 removeEntry(entry);
                 screen.getMenu().ee_pearl_amount++;
                 screen.getMenu().setSelectedPosition(null);
@@ -86,7 +86,7 @@ public class WaypointList extends ContainerObjectSelectionList<WaypointList.Wayp
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (selectedPosition == null) return false;
-        List<MarkedPositionsManager.MarkedPositions> subList = screen.getMarkedPositionsCache().stream().filter(p -> p.iconIndex() == screen.selectedTab).toList();
+        List<EnderEchoWaypoint> subList = screen.getWaypointsCache().stream().filter(p -> p.iconIndex() == screen.selectedTab).toList();
         return switch (keyCode) {
             case 265 -> moveInSubList(subList, -1, hasShiftDown()); // ↑
             case 264 -> moveInSubList(subList, 1, hasShiftDown()); // ↓
@@ -94,7 +94,7 @@ public class WaypointList extends ContainerObjectSelectionList<WaypointList.Wayp
         };
     }
 
-    private boolean moveInSubList(List<MarkedPositionsManager.MarkedPositions> subList, int dir, boolean extreme) {
+    private boolean moveInSubList(List<EnderEchoWaypoint> subList, int dir, boolean extreme) {
         if (subList.isEmpty()) return false;
 
         int i = subList.indexOf(selectedPosition);
@@ -107,19 +107,19 @@ public class WaypointList extends ContainerObjectSelectionList<WaypointList.Wayp
             if (targetSubIndex < 0 || targetSubIndex >= subList.size()) return false;
         }
 
-        MarkedPositionsManager.MarkedPositions target = subList.get(targetSubIndex);
+        EnderEchoWaypoint target = subList.get(targetSubIndex);
         swapInMainList(selectedPosition, target);
         return true;
     }
 
-    public void swapInMainList(MarkedPositionsManager.MarkedPositions a, MarkedPositionsManager.MarkedPositions b) {
-        int ia = screen.getMarkedPositionsCache().indexOf(a);
-        int ib = screen.getMarkedPositionsCache().indexOf(b);
+    public void swapInMainList(EnderEchoWaypoint a, EnderEchoWaypoint b) {
+        int ia = screen.getWaypointsCache().indexOf(a);
+        int ib = screen.getWaypointsCache().indexOf(b);
 
         if (ia == -1 || ib == -1) return;
 
-        screen.getMarkedPositionsCache().set(ia, b);
-        screen.getMarkedPositionsCache().set(ib, a);
+        screen.getWaypointsCache().set(ia, b);
+        screen.getWaypointsCache().set(ib, a);
     }
 
     @Override
@@ -136,7 +136,7 @@ public class WaypointList extends ContainerObjectSelectionList<WaypointList.Wayp
         );
         private final Minecraft mc = Minecraft.getInstance();
         private final WaypointList parent;
-        private final MarkedPositionsManager.MarkedPositions markedPosition;
+        private final EnderEchoWaypoint waypoint;
         private final boolean isSelf;
         private final boolean can_crossDimension;
         public boolean selected = false;
@@ -144,10 +144,10 @@ public class WaypointList extends ContainerObjectSelectionList<WaypointList.Wayp
         private final boolean canWarp;
         private final boolean isFacing_down;
 
-        public WaypointEntry(WaypointList parent, MarkedPositionsManager.MarkedPositions M) {
+        public WaypointEntry(WaypointList parent, EnderEchoWaypoint M) {
             this.parent = parent;
             var menu = parent.screen.getMenu();
-            this.markedPosition = M;
+            this.waypoint = M;
             this.canWarp = menu.canWarp();
             this.isFacing_down = menu.isFacing_down();
             this.isSelf = M.pos().above(2).equals(menu.getTunerPos().pos())
@@ -160,13 +160,13 @@ public class WaypointList extends ContainerObjectSelectionList<WaypointList.Wayp
         public void render(GuiGraphics gfx, int index, int top, int left, int entryWidth, int height,
                            int mouseX, int mouseY, boolean hovered, float partialTick) {
             this.hovered = hovered && !parent.getContextMenu().isVisible();
-            selected = parent.selectedPosition == markedPosition;
+            selected = parent.selectedPosition == waypoint;
             int width = entryWidth - 6;
 
             gfx.blitSprite(SPRITES.get(canSelect(), this.hovered || this.selected), left + 3, top, width - 4, height);
 
             // ---- 绘制文字 ----
-            Component text = Component.literal(markedPosition.name());
+            Component text = Component.literal(waypoint.name());
 
             int color = selected ? 0xFFFFA0 : 0xE0E0E0;
             gfx.drawString(mc.font, text, left + width / 2 - mc.font.width(text) / 2 + 3, top + 6, color, false);
@@ -174,8 +174,8 @@ public class WaypointList extends ContainerObjectSelectionList<WaypointList.Wayp
 
         public void renderTooltip(GuiGraphics gfx, int mouseX, int mouseY) {
             if (!this.hovered) return;
-            var posText = Component.translatable("item.enderechoing.ender_echoing_pearl.position", markedPosition.pos().toShortString(), Component.translationArg(markedPosition.dimension().location()));
-            var distanceText = Component.translatable("screen.enderechoing.distance", (int) Math.sqrt(parent.screen.getMenu().getTunerPos().pos().distSqr(markedPosition.pos())));
+            var posText = Component.translatable("item.enderechoing.ender_echoing_pearl.position", waypoint.pos().toShortString(), Component.translationArg(waypoint.dimension().location()));
+            var distanceText = Component.translatable("screen.enderechoing.distance", (int) Math.sqrt(parent.screen.getMenu().getTunerPos().pos().distSqr(waypoint.pos())));
             gfx.renderComponentTooltip(mc.font, List.of(posText, distanceText), mouseX, mouseY);
         }
 
@@ -187,9 +187,9 @@ public class WaypointList extends ContainerObjectSelectionList<WaypointList.Wayp
 
             if (button == 1) {
                 selected = true;
-                parent.openContextMenu((int) mouseX, (int) mouseY, markedPosition, this);
+                parent.openContextMenu((int) mouseX, (int) mouseY, waypoint, this);
             }
-            parent.selectedPosition = selected ? markedPosition : null;
+            parent.selectedPosition = selected ? waypoint : null;
             parent.setSelected(this);
             parent.screen.getMenu().setSelectedPosition(parent.selectedPosition);
             parent.screen.teamList.selectedMember = null;
@@ -202,7 +202,7 @@ public class WaypointList extends ContainerObjectSelectionList<WaypointList.Wayp
                     || (parent.screen.getMenu().ee_pearl_amount > 0 && (can_crossDimension || canWarp)));
         }
 
-        public MarkedPositionsManager.MarkedPositions getMarkedPosition() {return markedPosition;}
+        public EnderEchoWaypoint getWaypoint() {return waypoint;}
 
         @Override
         public List<? extends GuiEventListener> children() {return List.of();}

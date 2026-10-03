@@ -3,10 +3,10 @@ package com.unddefined.enderechoing.compat.sculkborne;
 import com.unddefined.enderechoing.EnderEchoing;
 import com.unddefined.enderechoing.entities.EnderEchoCrystalEntity;
 import com.unddefined.enderechoing.network.packet.OpenEditScreenPacket;
-import com.unddefined.enderechoing.server.DataComponents.EnderEchoCrystalSavedData;
-import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
+import com.unddefined.enderechoing.api.crystal.EnderEchoCrystals;
 import com.unddefined.enderechoing.server.registry.BlockRegistry;
 import com.unddefined.enderechoing.server.registry.ItemRegistry;
+import com.unddefined.enderechoing.api.anchor.EnderEchoAnchors;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -38,9 +38,15 @@ public final class CompatSculkInteractions {
         var pos = event.getPos();
 
         if (stack.is(ItemRegistry.ENDER_ECHOING_CORE.get())) {
+            // 锚点 Pre 被取消时不放方块、不消耗物品
+            if (!EnderEchoAnchors.canRegister(player, level, pos)) {
+                event.setCancellationResult(InteractionResult.FAIL);
+                event.setCanceled(true);
+                return;
+            }
             if (!player.isCreative()) stack.shrink(1);
             level.setBlock(pos, BlockRegistry.ENDER_ECHOIC_RESONATOR.get().defaultBlockState(), 3);
-            MarkedPositionsManager.getManager(player).addTeleporter(level, pos);
+            EnderEchoAnchors.add(player, level, pos);
             if (player.getInventory().hasAnyMatching(item ->
                     item.getItem() == ItemRegistry.ENDER_ECHOING_PEARL.get() && item.get(CUSTOM_NAME) == null)
                     || player.getData(EE_PEARL_AMOUNT.get()) > 0) {
@@ -63,10 +69,16 @@ public final class CompatSculkInteractions {
         }
 
         if (stack.is(ItemRegistry.ENDER_ECHO_CRYSTAL.get())) {
+            // 水晶 Pre 被取消时不放方块、不生成实体、不消耗物品
+            if (!EnderEchoCrystals.canAdd(player, level.dimension(), pos)) {
+                event.setCancellationResult(InteractionResult.FAIL);
+                event.setCanceled(true);
+                return;
+            }
             if (!player.isCreative()) stack.shrink(1);
             level.setBlock(pos, BlockRegistry.ENDER_ECHO_CRYSTAL.get().defaultBlockState(), 3);
             level.addFreshEntity(new EnderEchoCrystalEntity(level, pos));
-            EnderEchoCrystalSavedData.get((ServerLevel) level).add(level.dimension(), pos);
+            EnderEchoCrystals.add((ServerLevel) level, pos);
             event.setCancellationResult(InteractionResult.SUCCESS);
             event.setCanceled(true);
         }
@@ -75,11 +87,17 @@ public final class CompatSculkInteractions {
         if (stack.is(Items.DRAGON_BREATH)
                 && level.getBlockEntity(pos) instanceof ContainerSingleItem shrieker
                 && shrieker.getTheItem().is(ItemRegistry.WARP_CORE.get())) {
+            // 锚点 Pre 被取消时不放方块、不消耗物品、不清空尖啸体槽位
+            if (!EnderEchoAnchors.canRegister(player, level, pos)) {
+                event.setCancellationResult(InteractionResult.FAIL);
+                event.setCanceled(true);
+                return;
+            }
             if (!player.isCreative()) stack.shrink(1);
             // 折跃核心由折跃平台承接，先清空槽位，避免 onRemove 再掉落一次
             shrieker.setTheItem(ItemStack.EMPTY);
             level.setBlock(pos, BlockRegistry.WARP_PLATFORM.get().defaultBlockState(), 3);
-            MarkedPositionsManager.getManager(player).addTeleporter(level, pos);
+            EnderEchoAnchors.add(player, level, pos);
             if (player.getInventory().hasAnyMatching(item ->
                     item.getItem() == ItemRegistry.ENDER_ECHOING_PEARL.get() && item.get(CUSTOM_NAME) == null)
                     || player.getData(EE_PEARL_AMOUNT.get()) > 0) {

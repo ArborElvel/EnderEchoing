@@ -15,18 +15,18 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-public record SendSyncedTeleporterPositionsPacket(List<BlockPos> list) implements CustomPacketPayload {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(EnderEchoing.MODID, "synced_teleporter_positions");
-    public static final Type<SendSyncedTeleporterPositionsPacket> TYPE = new Type<>(ID);
-    public static final StreamCodec<RegistryFriendlyByteBuf, SendSyncedTeleporterPositionsPacket> STREAM_CODEC =StreamCodec.composite(
+public record SendSyncedAnchorPositionsPacket(List<BlockPos> list) implements CustomPacketPayload {
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(EnderEchoing.MODID, "synced_anchor_positions");
+    public static final Type<SendSyncedAnchorPositionsPacket> TYPE = new Type<>(ID);
+    public static final StreamCodec<RegistryFriendlyByteBuf, SendSyncedAnchorPositionsPacket> STREAM_CODEC =StreamCodec.composite(
             BlockPos.STREAM_CODEC.apply(ByteBufCodecs.list(256)),
-            SendSyncedTeleporterPositionsPacket::list,
-            SendSyncedTeleporterPositionsPacket::new
+            SendSyncedAnchorPositionsPacket::list,
+            SendSyncedAnchorPositionsPacket::new
     );
 
     @OnlyIn(Dist.CLIENT)
-    public static void handle(SendSyncedTeleporterPositionsPacket msg, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> EchoRenderer.syncedTeleporterPositions = msg.list);
+    public static void handle(SendSyncedAnchorPositionsPacket msg, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> EchoRenderer.syncedAnchorPositions = msg.list);
     }
 
     @Override

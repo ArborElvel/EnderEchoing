@@ -85,9 +85,9 @@ public class ModNetwork {
                 () -> SetEchoSoundingPosPacket::handle
         );
         registerClientPayload(registrar,
-                SendMarkedPositionNamesPacket.TYPE,
-                SendMarkedPositionNamesPacket.STREAM_CODEC,
-                () -> SendMarkedPositionNamesPacket::handle
+                SendWaypointNamesPacket.TYPE,
+                SendWaypointNamesPacket.STREAM_CODEC,
+                () -> SendWaypointNamesPacket::handle
         );
 
         registerClientPayload(registrar,
@@ -97,9 +97,9 @@ public class ModNetwork {
         );
 
         registerClientPayload(registrar,
-                SendSyncedTeleporterPositionsPacket.TYPE,
-                SendSyncedTeleporterPositionsPacket.STREAM_CODEC,
-                () -> SendSyncedTeleporterPositionsPacket::handle
+                SendSyncedAnchorPositionsPacket.TYPE,
+                SendSyncedAnchorPositionsPacket.STREAM_CODEC,
+                () -> SendSyncedAnchorPositionsPacket::handle
         );
 
         // 注册结构信息请求和回复数据包

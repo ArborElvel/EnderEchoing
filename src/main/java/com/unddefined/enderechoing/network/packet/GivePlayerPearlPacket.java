@@ -1,6 +1,7 @@
 package com.unddefined.enderechoing.network.packet;
 
 import com.unddefined.enderechoing.EnderEchoing;
+import com.unddefined.enderechoing.api.pearl.EnderEchoPearls;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -9,7 +10,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import static com.unddefined.enderechoing.server.registry.DataRegistry.EE_PEARL_AMOUNT;
+import static com.unddefined.enderechoing.api.event.EnderEchoPearlEvent.Cause.*;
 import static com.unddefined.enderechoing.server.registry.DataRegistry.POSITION;
 
 public record GivePlayerPearlPacket(ItemStack itemStack) implements CustomPacketPayload {
@@ -26,7 +27,7 @@ public record GivePlayerPearlPacket(ItemStack itemStack) implements CustomPacket
             if (context.player() instanceof ServerPlayer S) {
                 S.getInventory().add(packet.itemStack);
                 if (packet.itemStack.get(POSITION) == null)
-                    S.setData(EE_PEARL_AMOUNT.get(), Math.max(S.getData(EE_PEARL_AMOUNT.get()) - packet.itemStack.getCount(), 0));
+                    EnderEchoPearls.set(S, Math.max(EnderEchoPearls.get(S) - packet.itemStack.getCount(), 0), CONVERT);
             }
         });
     }

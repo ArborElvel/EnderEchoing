@@ -3,10 +3,12 @@ package com.unddefined.enderechoing.blocks;
 import com.unddefined.enderechoing.blocks.entity.EnderEchoTunerBlockEntity;
 import com.unddefined.enderechoing.client.gui.TunerMenu;
 import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
-import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
+import com.unddefined.enderechoing.api.pearl.EnderEchoPearls;
 import com.unddefined.enderechoing.server.registry.BlockEntityRegistry;
 import com.unddefined.enderechoing.server.registry.ItemRegistry;
-import com.unddefined.enderechoing.server.team.TeamManager;
+import com.unddefined.enderechoing.api.team.EnderEchoTeams;
+import com.unddefined.enderechoing.api.anchor.EnderEchoAnchors;
+import com.unddefined.enderechoing.api.waypoint.EnderEchoWaypoints;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
@@ -46,6 +48,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 import static com.unddefined.enderechoing.server.registry.DataRegistry.*;
+import static com.unddefined.enderechoing.api.event.EnderEchoPearlEvent.Cause.*;
 import static com.unddefined.enderechoing.server.registry.ItemRegistry.ENDER_ECHOING_PEARL;
 import static net.minecraft.core.component.DataComponents.CUSTOM_NAME;
 
@@ -104,10 +107,9 @@ public class EnderEchoTunerBlock extends Block implements EntityBlock {
         if (hand != InteractionHand.MAIN_HAND) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         if (stack.is(ENDER_ECHOING_PEARL.get())) {
             var entityData = stack.get(ENTITY);
-            var manager = MarkedPositionsManager.getManager(player);
             if (entityData != null && !entityData.playerId().equals(player.getUUID())) {
                 if (player instanceof ServerPlayer inviter) {
-                    var result = TeamManager.invite(inviter.server, inviter.getUUID(), entityData.playerId());
+                    var result = EnderEchoTeams.invite(inviter.server, inviter.getUUID(), entityData.playerId());
                     var target = inviter.server.getPlayerList().getPlayer(entityData.playerId());
                     String targetName = target != null ? target.getGameProfile().getName()
                             : (stack.get(CUSTOM_NAME) != null ? stack.get(CUSTOM_NAME).getString() : "?");
@@ -115,7 +117,7 @@ public class EnderEchoTunerBlock extends Block implements EntityBlock {
                         case SUCCESS_CREATED, SUCCESS_JOINED -> {
                             stack.shrink(1);
                             inviter.sendSystemMessage(Component.translatable(
-                                    result == TeamManager.InviteResult.SUCCESS_CREATED
+                                    result == EnderEchoTeams.InviteResult.SUCCESS_CREATED
                                             ? "message.enderechoing.team.invite_created"
                                             : "message.enderechoing.team.invite_joined",
                                     targetName));
@@ -125,18 +127,27 @@ public class EnderEchoTunerBlock extends Block implements EntityBlock {
                         case DENIED_SELF -> inviter.sendSystemMessage(Component.translatable("message.enderechoing.team.invite_self"));
                         case DENIED_ALREADY_IN_TEAM -> inviter.sendSystemMessage(Component.translatable("message.enderechoing.team.invite_target_in_team"));
                         case DENIED_NO_PERMISSION -> inviter.sendSystemMessage(Component.translatable("message.enderechoing.team.invite_no_permission"));
+                        case DENIED_CANCELLED -> inviter.sendSystemMessage(Component.translatable("message.enderechoing.team.invite_cancelled"));
                     }
                 }
                 return ItemInteractionResult.SUCCESS;
             }
             var stackPos = stack.get(POSITION);
-            boolean result = stackPos != null && manager.addMarkedPosition(stackPos.dimension(), stackPos.pos(), stack.get(CUSTOM_NAME).getString(), player.getData(SELECTED_TUNER_TAB), Boolean.TRUE.equals(stack.get(TBOUND)));
-            // 凭证珍珠：插入时给接收方补登记，坐标需仍是传送点方块
-            if (result && Boolean.TRUE.equals(stack.get(TBOUND))) {
-                var S = player.getServer() == null ? null : player.getServer().getLevel(stackPos.dimension());
-                if (S != null && manager.isTeleporter(S, stackPos.pos())) manager.addTeleporter(S, stackPos.pos());
+            boolean result = false;
+            if (stackPos != null) {
+                var pearlName = stack.get(CUSTOM_NAME).getString();
+                int iconIndex = player.getData(SELECTED_TUNER_TAB);
+                boolean bound = Boolean.TRUE.equals(stack.get(ANCHOR_BOUND));
+                result = EnderEchoWaypoints.add(player, stackPos.dimension(), stackPos.pos(), pearlName, iconIndex, bound);
             }
-            player.setData(EE_PEARL_AMOUNT, player.getData(EE_PEARL_AMOUNT) + stack.getCount() - (result ? 1 : 0));
+            // 凭证珍珠：插入时给接收方补登记，坐标需仍是锚点方块
+            if (result && Boolean.TRUE.equals(stack.get(ANCHOR_BOUND))) {
+                var S = player.getServer() == null ? null : player.getServer().getLevel(stackPos.dimension());
+                if (S != null && EnderEchoAnchors.isAnchor(S, stackPos.pos())
+                        && EnderEchoAnchors.canRegister(player, S, stackPos.pos()))
+                    EnderEchoAnchors.add(player, S, stackPos.pos());
+            }
+            EnderEchoPearls.add(player, stack.getCount() - (result ? 1 : 0), CONVERT);
             stack.shrink(stack.getCount());
             return ItemInteractionResult.SUCCESS;
         }

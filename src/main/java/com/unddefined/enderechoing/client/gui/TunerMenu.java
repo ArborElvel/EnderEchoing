@@ -4,9 +4,9 @@ import com.unddefined.enderechoing.blocks.entity.EnderEchoTunerBlockEntity;
 import com.unddefined.enderechoing.blocks.entity.WarpPlatformBlockEntity;
 import com.unddefined.enderechoing.network.packet.GivePlayerPearlPacket;
 import com.unddefined.enderechoing.network.packet.SetSelectedPositionPacket;
-import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
-import com.unddefined.enderechoing.server.team.PlayerTeam;
-import com.unddefined.enderechoing.server.team.TeamManager;
+import com.unddefined.enderechoing.api.team.EnderEchoTeam;
+import com.unddefined.enderechoing.api.team.EnderEchoTeams;
+import com.unddefined.enderechoing.api.waypoint.EnderEchoWaypoint;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -48,7 +48,7 @@ public class TunerMenu extends AbstractContainerMenu {
     private boolean facing_down = false;
     private final boolean canWarp;
     private List<ItemStack> iconList = new ArrayList<>();
-    private List<MarkedPositionsManager.MarkedPositions> markedPositionsCache;
+    private List<EnderEchoWaypoint> waypointsCache;
     private List<Members> members = new ArrayList<>();
     private GlobalPos tunerPos;
     private GlobalPos selectedPos = GZERO;
@@ -67,7 +67,7 @@ public class TunerMenu extends AbstractContainerMenu {
         this.facing_down = buf.readBoolean();
         this.canWarp = buf.readBoolean();
         for (int i = 0; i < 10; i++) this.iconList.add(new ItemStack(ITEM.get(buf.readResourceLocation())));
-        this.markedPositionsCache = buf.readList(MarkedPositionsManager.MarkedPositions.STREAM_CODEC);
+        this.waypointsCache = buf.readList(EnderEchoWaypoint.STREAM_CODEC);
         this.members = buf.readList(Members.STREAM_CODEC);
     }
 
@@ -79,9 +79,9 @@ public class TunerMenu extends AbstractContainerMenu {
             this.selected_tuner_tab = playerInv.player.getData(SELECTED_TUNER_TAB.get());
             this.ee_pearl_amount = playerInv.player.getData(EE_PEARL_AMOUNT.get());
             this.iconList = playerInv.player.getData(ICON_LIST.get());
-            var M = playerInv.player.getData(MARKED_POSITIONS_CACHE.get());
+            var M = playerInv.player.getData(WAYPOINT_CACHE.get());
             M.checkBounds();
-            this.markedPositionsCache = M.markedPositions();
+            this.waypointsCache = M.waypoints();
             if (playerInv.player instanceof ServerPlayer S) this.members = collectTeamMembers(S);
             if (level.getBlockEntity(pos) instanceof EnderEchoTunerBlockEntity E){
                 this.multi_blocked = E.checkMultiblock();
@@ -99,7 +99,7 @@ public class TunerMenu extends AbstractContainerMenu {
         list.add(new Members(player.getUUID(), player.getGameProfile().getName(),
                 player.level().dimension(), player.blockPosition(), true));
 
-        PlayerTeam team = TeamManager.teamOf(player.server, player.getUUID());
+        EnderEchoTeam team = EnderEchoTeams.teamOf(player.server, player.getUUID());
         if (team == null) return list;
         for (UUID memberId : team.members()) {
             if (memberId.equals(player.getUUID())) continue;
@@ -116,7 +116,7 @@ public class TunerMenu extends AbstractContainerMenu {
         return list;
     }
 
-    public void setSelectedPosition(MarkedPositionsManager.MarkedPositions M) {
+    public void setSelectedPosition(EnderEchoWaypoint M) {
         if (canWarp && !(Minecraft.getInstance().level.getBlockEntity(tunerPos.pos()) instanceof WarpPlatformBlockEntity)) return;
         if (M == null) PacketDistributor.sendToServer(new SetSelectedPositionPacket(tunerPos.pos(), GZERO, ""));
         else PacketDistributor.sendToServer(new SetSelectedPositionPacket(tunerPos.pos(), new GlobalPos(M.dimension(), M.pos()), M.name()));
@@ -150,7 +150,7 @@ public class TunerMenu extends AbstractContainerMenu {
 
     public boolean canWarp() {return canWarp;}
 
-    public List<MarkedPositionsManager.MarkedPositions> getMarkedPositionsCache() {return markedPositionsCache;}
+    public List<EnderEchoWaypoint> getWaypointsCache() {return waypointsCache;}
 
     public List<Members> getMembers() {return members;}
 
@@ -164,7 +164,7 @@ public class TunerMenu extends AbstractContainerMenu {
         buf.writeBoolean(facing_down);
         buf.writeBoolean(canWarp);
         for (ItemStack stack : iconList) buf.writeResourceLocation(ITEM.getKey(stack.getItem()));
-        buf.writeCollection(markedPositionsCache, MarkedPositionsManager.MarkedPositions.STREAM_CODEC);
+        buf.writeCollection(waypointsCache, EnderEchoWaypoint.STREAM_CODEC);
         buf.writeCollection(members, Members.STREAM_CODEC);
     }
 

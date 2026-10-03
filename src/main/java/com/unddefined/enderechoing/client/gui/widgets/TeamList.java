@@ -7,7 +7,7 @@ import com.unddefined.enderechoing.network.packet.AddEffectPacket;
 import com.unddefined.enderechoing.network.packet.RemoveTeamMemberPacket;
 import com.unddefined.enderechoing.network.packet.TeleportRequestPacket;
 import com.unddefined.enderechoing.server.DataComponents.EntityData;
-import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
+import com.unddefined.enderechoing.api.waypoint.EnderEchoWaypoint;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ContainerObjectSelectionList;
@@ -165,7 +165,7 @@ public class TeamList extends ContainerObjectSelectionList<TeamList.MemberEntry>
                 parent.selectedMember = selected ? member : null;
                 parent.setSelected(this);
                 parent.screen.waypointList.selectedPosition = null;
-                var M = new MarkedPositionsManager.MarkedPositions(member.dimension(), member.blockPos(), member.playerName(), 0, false);
+                var M = new EnderEchoWaypoint(member.dimension(), member.blockPos(), member.playerName(), 0, false);
                 parent.screen.getMenu().setSelectedPosition(M);
                 PacketDistributor.sendToServer(new AddEffectPacket(SculkBorneBridge.veilEffect(), 3 * 20, member.uuid()));
             }

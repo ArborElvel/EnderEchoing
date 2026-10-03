@@ -5,8 +5,10 @@ import com.unddefined.enderechoing.blocks.entity.EnderEchoicResonatorBlockEntity
 import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
 import com.unddefined.enderechoing.network.packet.SetEchoSoundingPosPacket;
 import com.unddefined.enderechoing.network.packet.SetTeleportPosPacket;
-import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
 import com.unddefined.enderechoing.server.registry.ItemRegistry;
+import com.unddefined.enderechoing.api.anchor.EnderEchoAnchors;
+import com.unddefined.enderechoing.api.waypoint.EnderEchoWaypoint;
+import com.unddefined.enderechoing.api.waypoint.EnderEchoWaypoints;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
@@ -54,9 +56,9 @@ public class EnderEchoCompass extends Item {
     public InteractionResult useOn(UseOnContext C) {
         if (!C.getLevel().getBlockState(C.getClickedPos()).is(ENDER_ECHOIC_RESONATOR)) return InteractionResult.PASS;
         C.getItemInHand().set(POSITION, GlobalPos.of(C.getLevel().dimension(), C.getClickedPos()));
-        MarkedPositionsManager.MarkedPositions name;
+        EnderEchoWaypoint name;
         if (C.getPlayer() == null) return InteractionResult.PASS;
-        name = MarkedPositionsManager.getManager(C.getPlayer()).markedPositions().stream().filter(t -> t.pos().equals(C.getClickedPos())).findFirst().orElse(null);
+            name = EnderEchoWaypoints.of(C.getPlayer()).stream().filter(t -> t.pos().equals(C.getClickedPos())).findFirst().orElse(null);
         if (name == null) return InteractionResult.PASS;
         C.getItemInHand().set(CUSTOM_NAME, Component.literal(name.name()));
         C.getPlayer().swing(C.getHand());
@@ -72,7 +74,7 @@ public class EnderEchoCompass extends Item {
                 return InteractionResultHolder.fail(stack);
             var pos = player.getLastDeathLocation().orElse(null);
             if (stack.get(POSITION) != null) {
-                MarkedPositionsManager.getManager(S).teleporters().stream().filter(t -> t.globalPos().equals(stack.get(POSITION))).findFirst().ifPresentOrElse(t -> {}, () -> {
+                EnderEchoAnchors.of(S).stream().filter(t -> t.equals(stack.get(POSITION))).findFirst().ifPresentOrElse(t -> {}, () -> {
                     stack.remove(POSITION);
                     stack.remove(CUSTOM_NAME);
                 });

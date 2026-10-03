@@ -2,7 +2,7 @@ package com.unddefined.enderechoing.server.registry;
 
 import com.mojang.serialization.Codec;
 import com.unddefined.enderechoing.server.DataComponents.EntityData;
-import com.unddefined.enderechoing.server.DataComponents.MarkedPositionsManager;
+import com.unddefined.enderechoing.server.DataComponents.EnderEchoPlayerData;
 import com.unddefined.enderechoing.server.DataComponents.VisitedStructures;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -33,16 +33,16 @@ public class DataRegistry {
             DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, "enderechoing");
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<GlobalPos>> POSITION =
             COMPONENT_TYPES.registerComponentType("position", builder -> builder.persistent(GlobalPos.CODEC));
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Boolean>> TBOUND =
-            COMPONENT_TYPES.registerComponentType("teleporter_bound", builder -> builder.persistent(Codec.BOOL));
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Boolean>> ANCHOR_BOUND =
+            COMPONENT_TYPES.registerComponentType("anchor_bound", builder -> builder.persistent(Codec.BOOL));
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<EntityData>> ENTITY =
             COMPONENT_TYPES.registerComponentType("entity", builder -> builder.persistent(EntityData.CODEC));
 
     public static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES =
             DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, "enderechoing");
-    public static final Supplier<AttachmentType<MarkedPositionsManager>> MARKED_POSITIONS_CACHE =
-            ATTACHMENT_TYPES.register("marked_positions_cache",
-                    () -> AttachmentType.serializable(MarkedPositionsManager::new).copyOnDeath().build());
+    public static final Supplier<AttachmentType<EnderEchoPlayerData>> WAYPOINT_CACHE =
+            ATTACHMENT_TYPES.register("waypoints_cache",
+                    () -> AttachmentType.serializable(EnderEchoPlayerData::new).copyOnDeath().build());
     public static final Supplier<AttachmentType<Integer>> EE_PEARL_AMOUNT =
             ATTACHMENT_TYPES.register("ee_pearl_amount",
                     () -> AttachmentType.builder(() -> 0).serialize(Codec.INT).copyOnDeath().build());
