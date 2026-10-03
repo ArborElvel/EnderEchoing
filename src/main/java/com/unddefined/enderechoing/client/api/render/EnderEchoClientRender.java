@@ -1,10 +1,12 @@
 package com.unddefined.enderechoing.client.api.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.unddefined.enderechoing.client.renderer.EchoRenderer;
 import com.unddefined.enderechoing.client.particles.EchoResponding;
 import com.unddefined.enderechoing.client.renderer.layer.OutlineRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.core.BlockPos;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 
 /**
@@ -46,5 +48,16 @@ public final class EnderEchoClientRender {
     public static void drawEchoResponse(PoseStack poseStack, MultiBufferSource bufferSource,
                                         BlockPos blockPos, int ticks) {
         EchoResponding.render(poseStack, bufferSource, blockPos, ticks);
+    }
+
+    /**
+     * 在当前 {@code RenderLevelStageEvent} 里补画回响波。
+     *
+     * <p>给「也用 AFTER_LEVEL 往主渲染目标画东西」的模组用：在自己的后处理画完之后调用，
+     * 让回响波固定叠在你的效果之上；同一帧内重复调用不会画第二遍。非 {@code AFTER_LEVEL}
+     * 阶段调用无效。
+     */
+    public static void renderEchoWaveAfterVeil(RenderLevelStageEvent event) {
+        EchoRenderer.renderEchoAfterSculkVeil(event);
     }
 }

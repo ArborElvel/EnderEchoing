@@ -69,6 +69,7 @@ side = "BOTH"
 | 结构 | `EnderEchoStructureEvent.Visited` | 否 | 玩家首次进入可被回响之眼定位的结构 |
 | 仪器 | `EnderEchoDeviceEvent.Pre` | 是 | 玩家通过调谐界面切换目的地前；内部复位不经过本事件 |
 | 仪器 | `EnderEchoDeviceEvent.PositionChanged` | 否 | 目的地变更后 |
+| 仪器 | `EnderEchoDeviceEvent.Tick` | 否 | 仪器每秒一次的服务端判定（谐振器 / 调谐器 / 折跃平台 / 水晶） |
 | 珍珠 | `EnderEchoPearlEvent.Changed` | 否 | 数量变化后；带 `Cause`（TELEPORT / WAYPOINT / CONVERT / SHARE / DEATH / SYNC） |
 | 队伍 | `EnderEchoTeamEvent.PreJoin` / `.PreLeave` / `.PreCaptainChanged` | 是 | 入队、离队、队长变更前 |
 | 队伍 | `Joined` / `Left` / `CaptainChanged` / `VoteCast` / `WaypointShared` | 否 | 对应动作完成后 |
@@ -102,6 +103,40 @@ public final class YourIntegration {
 
 ```java
 EnderEchoingApi.registerAnchor((level, pos) -> level.getBlockState(pos).is(YourBlocks.MY_ANCHOR));
+```
+
+## 可选依赖模组怎么接
+
+如果你的模组把 `enderechoing` 当**可选依赖**（不装也要能启动），不要用 `@EventBusSubscriber`
+直接订阅本模组的事件——那会在注册监听器时解析事件类型，缺 mod 时会炸。改成显式注册：
+
+```java
+// 你的主类构造函数里
+if (ModList.get().isLoaded("enderechoing")) {
+    NeoForge.EVENT_BUS.register(YourEnderEchoCompatEvents.class);
+}
+```
+
+`YourEnderEchoCompatEvents` 里可以自由引用本模组的类型，因为它只有装了 enderechoing 才会被加载：
+
+```java
+public final class YourEnderEchoCompatEvents {
+    @SubscribeEvent
+    public static void onTeleport(EnderEchoTeleportEvent.Post event) {
+        // 传送成功后做点什么
+    }
+
+    @SubscribeEvent
+    public static void onDeviceTick(EnderEchoDeviceEvent.Tick event) {
+        // 仪器每秒一次的判定
+    }
+}
+```
+
+客户端渲染钩子同理，直接调用即可（记得放在 `Dist.CLIENT` 分支里）：
+
+```java
+EnderEchoClientRender.renderEchoWaveAfterVeil(event);
 ```
 
 ## 注意事项

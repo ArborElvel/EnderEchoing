@@ -1,7 +1,8 @@
 package com.unddefined.enderechoing.blocks.entity;
 
 import com.unddefined.enderechoing.server.registry.BlockEntityRegistry;
-import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
+import com.unddefined.enderechoing.api.event.EnderEchoDeviceEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -45,8 +46,10 @@ public class EnderEchoCrystalBlockEntity extends BlockEntity implements GeoBlock
     public static void tick(Level level, BlockPos pos, BlockState state, EnderEchoCrystalBlockEntity self) {
         if (level == null || level.isClientSide) return;
 
-        // 每秒让 sculkborne 判定一次：徘徊者有没有极小概率出现在仪器上
-        if (level.getGameTime() % 20 == 0) SculkBorneBridge.deviceTick(level, pos);
+        // 每秒一次：对外事件，sculkborne 侧监听后自行决定要不要生成徘徊者
+        if (level.getGameTime() % 20 == 0) {
+            NeoForge.EVENT_BUS.post(new EnderEchoDeviceEvent.Tick(level, pos));
+        }
 
         if (self.playerUUID == null || self.playerUUID.equals(zeroUUID)) return;
         var player = level.getPlayerByUUID(self.playerUUID);

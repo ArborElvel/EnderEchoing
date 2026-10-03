@@ -1,7 +1,6 @@
 package com.unddefined.enderechoing.api.teleport;
 
 import com.unddefined.enderechoing.api.event.EnderEchoTeleportEvent;
-import com.unddefined.enderechoing.compat.sculkborne.SculkBorneBridge;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
@@ -12,7 +11,7 @@ import net.neoforged.neoforge.common.NeoForge;
  * 传送前后统一入口：各传送装置都调用这里，模组内部也一样。
  *
  * <p>传送前调用 {@link #canTeleport} 派发可取消的 {@link EnderEchoTeleportEvent.Pre}；
- * 传送成功后调用 {@link #afterTeleport} 派发 {@link EnderEchoTeleportEvent.Post} 并通知 sculkborne 兼容桥。
+ * 传送成功后调用 {@link #afterTeleport} 派发 {@link EnderEchoTeleportEvent.Post}。
  * 新增传送装置时必须成对调用，并提供传送前维度、传送前坐标与目标坐标，顺序不能颠倒。
  */
 public final class EnderEchoTeleports {
@@ -32,7 +31,5 @@ public final class EnderEchoTeleports {
 
     public static void afterTeleport(ServerPlayer player, Level fromLevel, Vec3 fromPos, GlobalPos target) {
         NeoForge.EVENT_BUS.post(new EnderEchoTeleportEvent.Post(player, fromLevel, fromPos, target));
-        // sculkborne 目前仍通过反射接收该通知；等它改为监听 EnderEchoTeleportEvent 后即可删除这一行
-        SculkBorneBridge.afterTeleport(player, fromLevel, fromPos);
     }
 }
